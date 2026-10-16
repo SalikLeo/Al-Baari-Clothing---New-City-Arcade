@@ -324,6 +324,7 @@ window.SalesForm = {
                   <tr>
                     <th class="py-1.5 px-2 w-10 text-center border-r border-slate-300">#</th>
                     <th class="py-1.5 px-3 border-r border-slate-300">Item Description</th>
+                    <th class="py-1.5 px-2 w-24 text-right border-r border-slate-300">L.Cost</th>
                     <th class="py-1.5 px-2 w-28 text-center border-r border-slate-300">Qty</th>
                     <th class="py-1.5 px-2 w-28 text-right border-r border-slate-300">Rate (Rs.)</th>
                     <th class="py-1.5 px-2 w-32 text-center border-r border-slate-300">Discount</th>
@@ -932,6 +933,37 @@ window.SalesForm = {
     return Math.max(0, stock);
   },
 
+  getItemLatestCost(item) {
+    if (!item) return 0;
+    const itemId = item.id !== undefined ? item.id : item.item_id;
+    const itemSlug = item.slug || item.section;
+    const prod = (this.availableItems || []).find(p => String(p.id) === String(itemId) && String(p.slug || '').toLowerCase() === String(itemSlug || '').toLowerCase());
+
+    let raw = null;
+    if (prod) {
+      if (prod.last_purchase_price !== undefined && prod.last_purchase_price !== null && prod.last_purchase_price !== '') {
+        raw = prod.last_purchase_price;
+      } else if (prod.latest_cost_price !== undefined && prod.latest_cost_price !== null && prod.latest_cost_price !== '') {
+        raw = prod.latest_cost_price;
+      } else if (prod.cost_price !== undefined && prod.cost_price !== null && prod.cost_price !== '') {
+        raw = prod.cost_price;
+      }
+    }
+
+    if (raw === null || raw === undefined) {
+      if (item.latest_cost !== undefined && item.latest_cost !== null && item.latest_cost !== '') {
+        raw = item.latest_cost;
+      } else if (item.last_purchase_price !== undefined && item.last_purchase_price !== null && item.last_purchase_price !== '') {
+        raw = item.last_purchase_price;
+      } else if (item.latest_cost_price !== undefined && item.latest_cost_price !== null && item.latest_cost_price !== '') {
+        raw = item.latest_cost_price;
+      } else {
+        raw = item.cost_price || 0;
+      }
+    }
+    return Number(raw) || 0;
+  },
+
   // --- Instant Keyboard-Driven Item Search & Dropdown (Tight Single Line) ---
   clearSearchInput() {
     const input = document.getElementById('sf-fast-item-search');
@@ -1215,6 +1247,10 @@ window.SalesForm = {
     } else {
       const activePrice = item.retail_price || 0;
       const activeCost = item.cost_price || 0;
+      const rawLatestCost = (item.last_purchase_price !== undefined && item.last_purchase_price !== null && item.last_purchase_price !== '') 
+        ? item.last_purchase_price 
+        : (item.latest_cost_price || item.cost_price || 0);
+      const latestCost = Number(rawLatestCost) || 0;
 
       const catLabel = this.getCategoryName(item);
       this.cart.push({
@@ -1224,6 +1260,9 @@ window.SalesForm = {
         retail_price: activePrice,
         original_retail_price: activePrice,
         cost_price: activeCost,
+        latest_cost: latestCost,
+        last_purchase_price: item.last_purchase_price,
+        latest_cost_price: item.latest_cost_price,
         qty: 1,
         slug: item.slug,
         unit: item.unit || 'pcs',
@@ -1478,6 +1517,7 @@ window.SalesForm = {
         ? (subtotal * discNum / 100) 
         : (discNum * item.qty);
       const categoryLabel = SalesForm.getCategoryName(item);
+      const latestCost = this.getItemLatestCost(item);
 
       return `
         <tr class="hover:bg-amber-50/40 transition-colors group">
@@ -1492,6 +1532,14 @@ window.SalesForm = {
               <span class="font-black text-slate-900 text-xs truncate max-w-[280px]">${item.item_name}</span>
               ${categoryLabel ? `<span class="text-[9px] font-bold text-slate-400 uppercase tracking-tight font-sans">(${categoryLabel})</span>` : ''}
               <span class="text-[9px] font-bold ${maxStock > 0 ? 'text-emerald-700 bg-emerald-50 border-emerald-200/60' : 'text-rose-600 bg-rose-50 border-rose-200/60'} px-1.5 py-0.2 rounded border tabular-nums ml-auto sm:ml-0">${maxStock} in stock</span>
+            </div>
+          </td>
+
+          <!-- L.Cost Column -->
+          <td class="py-1.5 px-2 text-right border-r border-slate-200 bg-slate-50/40">
+            <div class="inline-flex items-center justify-end">
+              <span class="text-[10px] font-bold text-slate-400 mr-1">Rs.</span>
+              <span class="font-black text-slate-700 text-xs tabular-nums font-display">${app.formatAmount(latestCost)}</span>
             </div>
           </td>
 
