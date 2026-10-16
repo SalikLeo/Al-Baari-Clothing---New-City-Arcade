@@ -300,6 +300,15 @@ window.SalesForm = {
               </div>
               
               <div class="flex items-center gap-2.5 flex-wrap">
+                <!-- Clear Bill Button -->
+                <button type="button" 
+                        onclick="SalesForm.confirmClearForm()" 
+                        class="px-2.5 py-1 text-[11px] font-bold text-rose-600 hover:text-white bg-rose-50 hover:bg-rose-600 border border-rose-200 hover:border-rose-600 rounded-xl transition-all flex items-center gap-1 shadow-2xs cursor-pointer" 
+                        title="Clear all added items and start a fresh bill">
+                  <i data-lucide="rotate-ccw" class="w-3.5 h-3.5"></i>
+                  <span>Clear Bill</span>
+                </button>
+
                 <!-- Invoice Number Field -->
                 <div class="flex items-center gap-1.5 bg-white border border-slate-200 px-2 py-1 rounded-xl shadow-xs">
                   <span class="text-slate-400 text-[10px] uppercase font-black tracking-wider">INV:</span>
@@ -2114,7 +2123,7 @@ window.SalesForm = {
           app.navigate('proposals');
         } else {
           app.showToast(`Invoice #${currentSaleNo} completed successfully!`, 'success');
-          app.navigate('proposal-form');
+          app.navigate('proposal-form', { reset: true });
         }
       } catch (e) {
         console.error("Sale save error:", e);
@@ -2404,5 +2413,54 @@ window.SalesForm = {
 
   async loadAllItems() {
     this.availableItems = await window.api.searchAllProducts('');
+  },
+
+  confirmClearForm() {
+    if (this.cart.length === 0 && !this.customerName) {
+      this.resetForm();
+      return;
+    }
+    app.showConfirm({
+      title: 'Clear Current Bill',
+      message: 'Are you sure you want to clear all items and start a fresh bill?',
+      confirmText: 'Clear Bill',
+      confirmColor: 'red',
+      onConfirm: () => {
+        this.resetForm();
+      }
+    });
+  },
+
+  async resetForm() {
+    this.cart = [];
+    this.customerId = null;
+    this.customerName = '';
+    this.customerPhone = '';
+    this.customerBalance = 0;
+    this.isReceivedManuallyEdited = false;
+    this.receivedAmount = 0;
+    this.cashTendered = '';
+    this.editingSaleId = null;
+    this.saleNumber = await window.api.getNextProposalNumber();
+    const numInput = document.getElementById('sf-sale-number');
+    if (numInput) numInput.value = this.saleNumber;
+    this.clearSelectedCustomer();
+    this.clearSearchInput();
+    const tenderedInput = document.getElementById('sf-cash-tendered');
+    if (tenderedInput) tenderedInput.value = '';
+    const recInput = document.getElementById('sf-received-amount');
+    if (recInput) recInput.value = '';
+    this.renderCart();
+    this.updateSummary();
+    app.showToast('Bill cleared', 'info');
+  },
+
+  async refreshStockIndicators() {
+    try {
+      this.availableItems = await window.api.searchAllProducts('');
+      this.renderCart();
+    } catch (e) {
+      console.error('Failed to refresh stock indicators:', e);
+    }
   }
 };

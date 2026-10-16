@@ -558,7 +558,7 @@ const RateList = {
     this.selectedCategory = catSlug;
     this.displayLimit = this.pageSize;
     this.applyFilter();
-    const container = document.getElementById('app-content');
+    const container = document.getElementById('tab-panel-rate-list') || document.getElementById('app-content');
     if (container) {
       this.render(container);
     }

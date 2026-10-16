@@ -235,25 +235,61 @@ const app = {
     });
 
     const content = document.getElementById('app-content');
-    content.innerHTML = '';
-    if (page !== 'proposal-form') {
-      content.style.overflow = '';
-      content.style.height = '';
+
+    // Hide all existing tab panels
+    const allPanels = content.querySelectorAll('.tab-page-panel');
+    allPanels.forEach(p => p.classList.add('hidden'));
+
+    let panel = document.getElementById(`tab-panel-${page}`);
+    const isNew = !panel;
+    const hasSpecificArgs = Boolean(args && (args.id || args.reset || Object.keys(args).length > 0));
+
+    // If user was editing a sale in proposal-form and now clicks "New Sale" without an edit ID, reset to new sale
+    const editingSaleToNewSale = (page === 'proposal-form' && window.SalesForm && SalesForm.editingSaleId && (!args || !args.id));
+
+    if (!panel) {
+      panel = document.createElement('div');
+      panel.id = `tab-panel-${page}`;
+      panel.className = 'tab-page-panel w-full h-full';
+      content.appendChild(panel);
     }
 
-    // Route to corresponding module
-    switch(page) {
-      case 'dashboard': (window.Dashboard || Dashboard).render(content); break;
-      case 'proposals': (window.Proposals || Proposals).render(content); break;
-      case 'customers': (window.Customers || Customers).render(content); break;
-      case 'item-sales': (window.ItemSales || ItemSales).render(content, args); break;
-      case 'proposal-form': (window.SalesForm || SalesForm).render(content, args); break;
-      case 'master-db': (window.MasterDB || MasterDB).render(content); break;
-      case 'rate-list': (window.RateList || RateList).render(content, args); break;
-      case 'expenses': (window.Expenses || Expenses).render(content); break;
-      case 'companies': (window.Companies || Companies).render(content); break;
-      case 'reports': (window.Reports || Reports).render(content); break;
-      case 'settings': (window.Settings || Settings).render(content); break;
+    panel.classList.remove('hidden');
+
+    if (page === 'proposal-form') {
+      content.style.overflow = 'hidden';
+      content.style.height = '100vh';
+      content.classList.remove('p-8');
+      content.classList.add('p-0');
+    } else {
+      content.style.overflow = '';
+      content.style.height = '';
+      content.classList.remove('p-0');
+      content.classList.add('p-8');
+    }
+
+    if (isNew || hasSpecificArgs || editingSaleToNewSale) {
+      // Route to corresponding module to render
+      switch(page) {
+        case 'dashboard': (window.Dashboard || Dashboard).render(panel); break;
+        case 'proposals': (window.Proposals || Proposals).render(panel); break;
+        case 'customers': (window.Customers || Customers).render(panel); break;
+        case 'item-sales': (window.ItemSales || ItemSales).render(panel, args); break;
+        case 'proposal-form': (window.SalesForm || SalesForm).render(panel, editingSaleToNewSale ? { reset: true } : args); break;
+        case 'master-db': (window.MasterDB || MasterDB).render(panel); break;
+        case 'rate-list': (window.RateList || RateList).render(panel, args); break;
+        case 'expenses': (window.Expenses || Expenses).render(panel); break;
+        case 'companies': (window.Companies || Companies).render(panel); break;
+        case 'reports': (window.Reports || Reports).render(panel); break;
+        case 'settings': (window.Settings || Settings).render(panel); break;
+      }
+    } else {
+      // Returning to an already-rendered tab without clearing state!
+      if (page === 'proposal-form' && window.SalesForm && typeof SalesForm.refreshStockIndicators === 'function') {
+        SalesForm.refreshStockIndicators();
+      } else if (page === 'master-db' && window.MasterDB && typeof MasterDB.selectCategory === 'function') {
+        MasterDB.selectCategory(MasterDB.currentCategory || 'all');
+      }
     }
     
     // Refresh Icons after rendering
@@ -265,6 +301,24 @@ const app = {
   showTabPasswordPrompt(page, args) {
     this.pendingNavigation = { page, args };
     const content = document.getElementById('app-content');
+
+    // Hide all existing tab panels
+    const allPanels = content.querySelectorAll('.tab-page-panel');
+    allPanels.forEach(p => p.classList.add('hidden'));
+
+    let lockPanel = document.getElementById('tab-lock-prompt-panel');
+    if (!lockPanel) {
+      lockPanel = document.createElement('div');
+      lockPanel.id = 'tab-lock-prompt-panel';
+      lockPanel.className = 'tab-page-panel w-full h-full';
+      content.appendChild(lockPanel);
+    }
+    lockPanel.classList.remove('hidden');
+
+    content.style.overflow = '';
+    content.style.height = '';
+    content.classList.remove('p-0');
+    content.classList.add('p-8');
 
     const tabNames = {
       'proposal-form': 'New Sale',
@@ -281,7 +335,7 @@ const app = {
     };
     const tabName = tabNames[page] || page;
 
-    content.innerHTML = `
+    lockPanel.innerHTML = `
         <div class="flex flex-col items-center justify-center h-[60vh]">
             <div class="bg-white p-8 rounded-2xl shadow-xl border border-slate-100 max-w-md w-full text-center space-y-6">
                 <div class="w-20 h-20 bg-amber-100 text-amber-600 rounded-full flex items-center justify-center mx-auto">
@@ -335,6 +389,8 @@ const app = {
         if (!this.unlockedTabs) this.unlockedTabs = {};
         const { page, args } = this.pendingNavigation;
         this.unlockedTabs[page] = true;
+        const lockPanel = document.getElementById('tab-lock-prompt-panel');
+        if (lockPanel) lockPanel.classList.add('hidden');
         this.navigate(page, args);
         this.pendingNavigation = null;
     } else {

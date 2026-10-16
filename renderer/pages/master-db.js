@@ -1347,7 +1347,8 @@ const MasterDB = {
       app.showAlert(res.error);
     } else {
       input.value = '';
-      await this.render(document.getElementById('app-content')); // Refresh sidebar
+      const c = document.getElementById('tab-panel-master-db') || document.getElementById('app-content');
+      await this.render(c); // Refresh sidebar
       await this.openManageCategoriesModal();
     }
   },
@@ -1357,7 +1358,8 @@ const MasterDB = {
     app.showLoading();
     await window.api.updateCategoryLabel(slug, newLabel.trim());
     app.hideLoading();
-    await this.render(document.getElementById('app-content')); // Refresh sidebar
+    const c = document.getElementById('tab-panel-master-db') || document.getElementById('app-content');
+    await this.render(c); // Refresh sidebar
     await this.openManageCategoriesModal();
   },
 
@@ -1382,7 +1384,8 @@ const MasterDB = {
                 const stats = await window.api.getCategoryStats();
                 this.currentCategory = stats.length > 0 ? stats[0].slug : '';
               }
-              await this.render(document.getElementById('app-content'));
+              const c = document.getElementById('tab-panel-master-db') || document.getElementById('app-content');
+              await this.render(c);
               await this.openManageCategoriesModal();
               app.hideLoading();
             }
