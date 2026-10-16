@@ -366,11 +366,28 @@ function seedInitialData() {
   try {
     // Ensure default company settings
     const existingCompany = db.prepare("SELECT value FROM settings WHERE key = 'company_name'").get();
-    if (!existingCompany || !existingCompany.value || existingCompany.value === 'Ultimate Marketing') {
+    if (!existingCompany || !existingCompany.value || existingCompany.value === 'Ultimate Marketing' || existingCompany.value.toLowerCase().includes('baba') || existingCompany.value.toLowerCase().includes('waziristan')) {
       db.prepare("INSERT OR REPLACE INTO settings (key, value) VALUES ('company_name', ?)").run('Ishaq Jadoon Traders');
     }
     db.prepare("INSERT OR REPLACE INTO settings (key, value) VALUES ('address', ?)").run('Near CB Plaza, Barrier 3, Main GT Road, Wah Cantt');
-    db.prepare("INSERT OR IGNORE INTO settings (key, value) VALUES ('phone', ?)").run('03095369472, 03299934620');
+    
+    // Check phone
+    const existingPhone = db.prepare("SELECT value FROM settings WHERE key = 'phone'").get();
+    if (!existingPhone || !existingPhone.value || existingPhone.value.includes('0312') || existingPhone.value.includes('Kaleem') || existingPhone.value.includes('03095369472')) {
+      db.prepare("INSERT OR REPLACE INTO settings (key, value) VALUES ('phone', ?)").run('M.Ishaq 0301-2630481, Ch. Shakir 0300-5074410');
+    }
+
+    // Clean up stale logo if it belongs to Baba Waziristan or temporary downloads
+    const existingLogo = db.prepare("SELECT value FROM settings WHERE key = 'logo_path'").get();
+    if (existingLogo && existingLogo.value && (
+      existingLogo.value.toLowerCase().includes('baba') ||
+      existingLogo.value.toLowerCase().includes('waziristan') ||
+      existingLogo.value.toLowerCase().includes('downloads\\logo.jpg') ||
+      existingLogo.value.toLowerCase().includes('downloads/logo.jpg')
+    )) {
+      db.prepare("INSERT OR REPLACE INTO settings (key, value) VALUES ('logo_path', ?)").run('');
+    }
+
     db.prepare("INSERT OR IGNORE INTO settings (key, value) VALUES ('tagline', ?)").run('Wholesale & Retail General Merchants');
 
     // Default expense categories
