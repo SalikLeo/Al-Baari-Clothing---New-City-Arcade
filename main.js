@@ -6,6 +6,7 @@ app.setName('ishaq-jadoon-traders');
 const db = require('./database');
 
 let mainWindow;
+let isQuitting = false;
 
 function createWindow() {
   mainWindow = new BrowserWindow({
@@ -32,6 +33,45 @@ function createWindow() {
       return { action: 'deny' };
     }
     return { action: 'allow' };
+  });
+
+  mainWindow.on('close', async (e) => {
+    if (isQuitting) return;
+
+    e.preventDefault();
+    isQuitting = true;
+
+    try {
+      // Sync any unsaved localStorage into SQLite store before backup
+      if (mainWindow && !mainWindow.isDestroyed() && mainWindow.webContents) {
+        try {
+          await mainWindow.webContents.executeJavaScript(`
+            (async () => {
+              if (window.api && window.api.saveAllKv) {
+                const allKv = {};
+                for (let i = 0; i < localStorage.length; i++) {
+                  const key = localStorage.key(i);
+                  if (key) allKv[key] = localStorage.getItem(key);
+                }
+                await window.api.saveAllKv(allKv);
+              }
+            })()
+          `, true);
+        } catch (syncErr) {
+          console.warn('LocalStorage pre-close sync warning:', syncErr);
+        }
+      }
+
+      await performAutoBackup();
+    } catch (err) {
+      console.error('Failed to perform auto backup on window close:', err);
+    } finally {
+      try { db.close(); } catch (e) {}
+      if (mainWindow && !mainWindow.isDestroyed()) {
+        mainWindow.destroy();
+      }
+      app.quit();
+    }
   });
 }
 
@@ -134,6 +174,110 @@ ipcMain.handle('select-logo-file', async () => {
     return result.filePaths[0]; // Return the absolute file path
   }
   return null;
+});
+
+// --- Automatic Backup Logic & IPC ---
+function pruneOldBackups(dir, keepCount = 50) {
+  try {
+    if (!fs.existsSync(dir)) return;
+    const files = fs.readdirSync(dir)
+      .filter(f => f.startsWith('IshaqJadoonTraders-AutoBackup-') && f.endsWith('.db'))
+      .map(f => {
+        const fullPath = path.join(dir, f);
+        return { name: f, fullPath, mtime: fs.statSync(fullPath).mtimeMs };
+      })
+      .sort((a, b) => b.mtime - a.mtime);
+
+    if (files.length > keepCount) {
+      for (let i = keepCount; i < files.length; i++) {
+        try { fs.unlinkSync(files[i].fullPath); } catch (e) {}
+      }
+    }
+  } catch (e) {
+    console.warn('[AutoBackup] Prune warning:', e);
+  }
+}
+
+async function performAutoBackup() {
+  try {
+    const settings = db.getSettings();
+    let targetDir = settings.auto_backup_dir;
+    const defaultDir = path.join(app.getPath('documents'), 'Ishaq Jadoon Traders Backups');
+
+    if (!targetDir || !fs.existsSync(targetDir)) {
+      try {
+        if (targetDir) fs.mkdirSync(targetDir, { recursive: true });
+      } catch (e) {
+        targetDir = defaultDir;
+      }
+    }
+    if (!targetDir || !fs.existsSync(targetDir)) {
+      targetDir = defaultDir;
+      try { fs.mkdirSync(targetDir, { recursive: true }); } catch (e) {}
+    }
+
+    const now = new Date();
+    const pad = (n) => String(n).padStart(2, '0');
+    const datetimeStr = `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}_${pad(now.getHours())}-${pad(now.getMinutes())}-${pad(now.getSeconds())}`;
+    const fileName = `IshaqJadoonTraders-AutoBackup-${datetimeStr}.db`;
+    const destPath = path.join(targetDir, fileName);
+
+    console.log(`[AutoBackup] Backing up database to: ${destPath}`);
+    await db.backupDatabase(destPath);
+    console.log(`[AutoBackup] Successfully created backup at: ${destPath}`);
+
+    pruneOldBackups(targetDir, 50);
+
+    return { success: true, path: destPath };
+  } catch (err) {
+    console.error('[AutoBackup] Error during auto-backup:', err);
+    return { success: false, error: err.message };
+  }
+}
+
+ipcMain.handle('get-backup-directory', () => {
+  const settings = db.getSettings();
+  if (settings.auto_backup_dir && fs.existsSync(settings.auto_backup_dir)) {
+    return settings.auto_backup_dir;
+  }
+  return path.join(app.getPath('documents'), 'Ishaq Jadoon Traders Backups');
+});
+
+ipcMain.handle('select-backup-directory', async () => {
+  const settings = db.getSettings();
+  const defaultDir = (settings.auto_backup_dir && fs.existsSync(settings.auto_backup_dir))
+    ? settings.auto_backup_dir
+    : path.join(app.getPath('documents'), 'Ishaq Jadoon Traders Backups');
+  if (!fs.existsSync(defaultDir)) {
+    try { fs.mkdirSync(defaultDir, { recursive: true }); } catch (e) {}
+  }
+
+  const result = await dialog.showOpenDialog(mainWindow, {
+    title: 'Select Automatic Backup Directory',
+    defaultPath: defaultDir,
+    properties: ['openDirectory', 'createDirectory']
+  });
+
+  if (!result.canceled && result.filePaths.length > 0) {
+    const selectedDir = result.filePaths[0];
+    db.saveSettings({ auto_backup_dir: selectedDir });
+    return { success: true, path: selectedDir };
+  }
+  return { success: false, cancelled: true };
+});
+
+ipcMain.handle('open-backup-directory', async () => {
+  const settings = db.getSettings();
+  let dir = settings.auto_backup_dir;
+  if (!dir || !fs.existsSync(dir)) {
+    dir = path.join(app.getPath('documents'), 'Ishaq Jadoon Traders Backups');
+  }
+  if (!fs.existsSync(dir)) {
+    try { fs.mkdirSync(dir, { recursive: true }); } catch (e) {}
+  }
+  const { shell } = require('electron');
+  await shell.openPath(dir);
+  return { success: true };
 });
 
 // Backup/Restore IPC

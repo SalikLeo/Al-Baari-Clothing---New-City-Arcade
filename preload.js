@@ -83,6 +83,9 @@ contextBridge.exposeInMainWorld('api', {
   restoreData: () => ipcRenderer.invoke('restore-data'),
   clearAppData: () => ipcRenderer.invoke('clear-app-data'),
   generatePDF: (filename) => ipcRenderer.invoke('generate-pdf', filename),
+  getBackupDirectory: () => ipcRenderer.invoke('get-backup-directory'),
+  selectBackupDirectory: () => ipcRenderer.invoke('select-backup-directory'),
+  openBackupDirectory: () => ipcRenderer.invoke('open-backup-directory'),
 
   // Storage Sync
   getAllKv: () => ipcRenderer.invoke('get-all-kv'),

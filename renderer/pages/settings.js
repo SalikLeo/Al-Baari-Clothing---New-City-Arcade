@@ -141,17 +141,47 @@ const Settings = {
 
           <!-- Backup & Restore -->
           <div class="bg-white rounded-xl shadow-sm border border-slate-100 overflow-hidden">
-            <div class="p-4 border-b border-slate-100 bg-slate-50">
+            <div class="p-4 border-b border-slate-100 bg-slate-50 flex items-center justify-between">
               <h3 class="font-bold text-lg text-slate-700">Backup & Data</h3>
+              <span class="text-[10px] font-black uppercase tracking-wider px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800 flex items-center gap-1">
+                <span class="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span> Auto Backup Active
+              </span>
             </div>
-            <div class="p-4 space-y-3">
+            <div class="p-4 space-y-4">
+              <!-- Automatic Backup on Exit (Directory Selection) -->
               <div class="flex items-start gap-4">
+                 <div class="w-10 h-10 rounded-lg bg-emerald-50 flex items-center justify-center text-emerald-600 shrink-0">
+                    <i data-lucide="shield-check" class="w-5 h-5"></i>
+                 </div>
+                 <div class="flex-1 min-w-0">
+                    <h4 class="font-bold text-slate-800 text-sm">Automatic Backup on Exit</h4>
+                    <p class="text-xs text-slate-500 mb-2.5">Your latest data is automatically backed up to this folder every time you close the app.</p>
+                    
+                    <div class="flex items-center gap-2 flex-wrap sm:flex-nowrap">
+                      <div class="flex-1 min-w-[200px] flex items-center gap-2 bg-slate-50 border border-slate-200 px-3 py-1.5 rounded-lg text-xs font-mono text-slate-700 truncate shadow-2xs">
+                        <i data-lucide="folder" class="w-4 h-4 text-slate-400 shrink-0"></i>
+                        <span id="auto-backup-dir-display" class="truncate" title="Backup folder">Loading...</span>
+                      </div>
+                      <button type="button" onclick="Settings.selectBackupDirectory()" class="bg-slate-800 hover:bg-slate-900 text-white font-bold px-3 py-1.5 rounded-lg text-xs transition-colors flex items-center gap-1.5 shrink-0 shadow-2xs cursor-pointer">
+                        <i data-lucide="folder-open" class="w-3.5 h-3.5"></i>
+                        Select Directory
+                      </button>
+                      <button type="button" onclick="Settings.openBackupDirectory()" class="bg-white hover:bg-slate-50 text-slate-700 border border-slate-200 font-bold px-3 py-1.5 rounded-lg text-xs transition-colors flex items-center gap-1.5 shrink-0 shadow-2xs cursor-pointer" title="Open folder in File Explorer">
+                        <i data-lucide="external-link" class="w-3.5 h-3.5"></i>
+                        Open Folder
+                      </button>
+                    </div>
+                 </div>
+              </div>
+
+              <!-- Manual Backup -->
+              <div class="pt-3 border-t border-slate-100 flex items-start gap-4">
                  <div class="w-10 h-10 rounded-lg bg-blue-50 flex items-center justify-center text-blue-600 shrink-0">
                     <i data-lucide="download" class="w-5 h-5"></i>
                  </div>
                  <div>
                     <h4 class="font-bold text-slate-800 text-sm">Backup Data Locally</h4>
-                    <p class="text-xs text-slate-500 mb-3">Backup all proposals, expenses, products, and logs into a single file.</p>
+                    <p class="text-xs text-slate-500 mb-3">Backup all proposals, expenses, products, and logs into a single file at any time.</p>
                     <button onclick="Settings.backupData()" class="bg-slate-800 hover:bg-slate-900 text-white font-bold px-4 py-2 rounded-lg text-xs transition-colors flex items-center gap-2 shadow-sm">
                       Backup App Data
                     </button>
@@ -243,6 +273,19 @@ const Settings = {
     }
 
     this.renderTabDropdown();
+
+    if (window.api && window.api.getBackupDirectory) {
+      try {
+        const backupDir = await window.api.getBackupDirectory();
+        const dirDisplay = document.getElementById('auto-backup-dir-display');
+        if (dirDisplay) {
+          dirDisplay.textContent = backupDir || 'Not configured';
+          dirDisplay.title = backupDir || '';
+        }
+      } catch (e) {
+        console.error('Error loading backup directory:', e);
+      }
+    }
   },
 
   async removeStockPassword() {
@@ -355,6 +398,34 @@ const Settings = {
       app.showAlert('Error saving settings: ' + err.message);
     } finally {
       app.hideLoading();
+    }
+  },
+
+  async selectBackupDirectory() {
+    if (!window.api || !window.api.selectBackupDirectory) return;
+    try {
+      const res = await window.api.selectBackupDirectory();
+      if (res && res.success && res.path) {
+        const dirDisplay = document.getElementById('auto-backup-dir-display');
+        if (dirDisplay) {
+          dirDisplay.textContent = res.path;
+          dirDisplay.title = res.path;
+        }
+        app.showToast('Auto-backup directory updated successfully', 'success');
+      }
+    } catch (err) {
+      console.error(err);
+      app.showAlert('Failed to select directory: ' + err.message);
+    }
+  },
+
+  async openBackupDirectory() {
+    if (!window.api || !window.api.openBackupDirectory) return;
+    try {
+      await window.api.openBackupDirectory();
+    } catch (err) {
+      console.error(err);
+      app.showAlert('Failed to open directory: ' + err.message);
     }
   },
 

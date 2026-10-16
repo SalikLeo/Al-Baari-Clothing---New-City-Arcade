@@ -390,6 +390,20 @@ function seedInitialData() {
 
     db.prepare("INSERT OR IGNORE INTO settings (key, value) VALUES ('tagline', ?)").run('Wholesale & Retail General Merchants');
 
+    // Default auto backup directory in Documents
+    const defaultBackupDir = (app && typeof app.getPath === 'function') 
+      ? path.join(app.getPath('documents'), 'Ishaq Jadoon Traders Backups')
+      : path.join(require('os').homedir(), 'Documents', 'Ishaq Jadoon Traders Backups');
+    const existingBackupDir = db.prepare("SELECT value FROM settings WHERE key = 'auto_backup_dir'").get();
+    if (!existingBackupDir || !existingBackupDir.value) {
+      db.prepare("INSERT OR REPLACE INTO settings (key, value) VALUES ('auto_backup_dir', ?)").run(defaultBackupDir);
+    }
+    try {
+      if (!fs.existsSync(defaultBackupDir)) {
+        fs.mkdirSync(defaultBackupDir, { recursive: true });
+      }
+    } catch(e) {}
+
     // Default expense categories
     const cats = ['Office', 'Transport', 'Utilities', 'Salaries', 'Purchase', 'Other'];
     const expenseStmt = db.prepare('INSERT OR IGNORE INTO expense_categories (name) VALUES (?)');
