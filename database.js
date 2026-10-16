@@ -576,7 +576,46 @@ function getProducts(category, companyId = null) {
   return db.prepare(sql).all(...params);
 }
 
+function findProductByName(itemName, excludeCategory = null, excludeId = null) {
+  if (!itemName || typeof itemName !== 'string') return null;
+  const cleanName = itemName.trim().replace(/\s+/g, ' ');
+  if (!cleanName) return null;
+  const lowerName = cleanName.toLowerCase();
+
+  const labels = getCategoryLabels();
+  for (const l of labels) {
+    const cat = l.slug;
+    const catLabel = l.label || cat;
+    let sql = `
+      SELECT id, item_name, current_stock, '${cat}' as slug, '${catLabel.replace(/'/g, "''")}' as category_label 
+      FROM products_${cat} 
+      WHERE LOWER(TRIM(COALESCE(item_name, description, ''))) = ?
+    `;
+    const params = [lowerName];
+    if (excludeCategory && excludeId && String(cat).toLowerCase() === String(excludeCategory).toLowerCase()) {
+      sql += ' AND id != ?';
+      params.push(Number(excludeId));
+    }
+    try {
+      const match = db.prepare(sql).get(...params);
+      if (match) {
+        return match;
+      }
+    } catch (e) {}
+  }
+  return null;
+}
+
 function addProduct(category, data) {
+  const itemName = (data.item_name || data.description || '').trim();
+  if (itemName) {
+    const existing = findProductByName(itemName);
+    if (existing) {
+      const catName = existing.category_label || existing.slug;
+      throw new Error(`Item "${existing.item_name || itemName}" is already in stock under "${catName}". Duplicate items cannot be added.`);
+    }
+  }
+
   const keys = Object.keys(data);
   const values = Object.values(data);
   const placeholders = keys.map(() => '?').join(', ');
@@ -585,6 +624,17 @@ function addProduct(category, data) {
 }
 
 function updateProduct(category, id, data) {
+  if (data.item_name !== undefined) {
+    const itemName = String(data.item_name || '').trim();
+    if (itemName) {
+      const existing = findProductByName(itemName, category, id);
+      if (existing) {
+        const catName = existing.category_label || existing.slug;
+        throw new Error(`Item "${existing.item_name || itemName}" is already in stock under "${catName}". Duplicate items cannot be added.`);
+      }
+    }
+  }
+
   const tableInfo = db.prepare(`PRAGMA table_info(products_${category})`).all();
   const columns = tableInfo.map(c => c.name);
   const cleanData = {};
@@ -1623,7 +1673,7 @@ module.exports = {
   init, getDbPath, close, backupDatabase, clearAllData,
   addProductStock, getRateHistory, deleteRateHistory, getAllRatesList, markProposalPaid,
   getSettings, saveSettings,
-  getProducts, addProduct, updateProduct, deleteProduct,
+  getProducts, addProduct, updateProduct, deleteProduct, findProductByName,
   getCategoryLabels, updateCategoryLabel, searchAllProducts, getCategoryStats, addCategory, deleteCategory,
   getProposals, getProposal, saveProposal, deleteProposal, updateProposalStatus, receivePayment, getNextProposalNumber, getNextCustomerName,
   getAllProposalItems,

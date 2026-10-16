@@ -11,6 +11,7 @@ contextBridge.exposeInMainWorld('api', {
   addProduct: (category, data) => ipcRenderer.invoke('add-product', category, data),
   updateProduct: (category, id, data) => ipcRenderer.invoke('update-product', category, id, data),
   deleteProduct: (category, id) => ipcRenderer.invoke('delete-product', category, id),
+  findProductByName: (name, excludeCategory, excludeId) => ipcRenderer.invoke('find-product-by-name', name, excludeCategory, excludeId),
   getCategoryLabels: () => ipcRenderer.invoke('get-category-labels'),
   getCategoryStats: () => ipcRenderer.invoke('get-category-stats'),
   updateCategoryLabel: (slug, label) => ipcRenderer.invoke('update-category-label', slug, label),

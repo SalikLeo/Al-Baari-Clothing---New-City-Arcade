@@ -1005,10 +1005,17 @@ const MasterDB = {
     const dynamicContainer = document.getElementById('db-dynamic-fields');
     dynamicContainer.innerHTML = cat.fields.map(f => {
       const isReq = f !== 'description';
+      const onInputAttr = f === 'item_name' ? 'oninput="MasterDB.onItemNameInput(this.value)"' : '';
       return `
       <div>
         <label class="block text-sm font-medium text-slate-700 mb-1">${this.capitalize(f)} ${isReq ? '*' : '<span class="text-xs text-slate-400 font-normal">(Optional)</span>'}</label>
-        <input type="text" id="db-field-${f}" ${isReq ? 'required' : ''} class="w-full border border-slate-300 rounded-lg p-2.5 focus:ring-2 focus:ring-accent focus:border-accent" value="${data ? (data[f] || '') : ''}">
+        <input type="text" id="db-field-${f}" ${isReq ? 'required' : ''} ${onInputAttr} class="w-full border border-slate-300 rounded-lg p-2.5 focus:ring-2 focus:ring-accent focus:border-accent" value="${data ? (data[f] || '') : ''}">
+        ${f === 'item_name' ? `
+          <div id="db-item-name-dup-warning" class="hidden text-xs font-bold text-rose-600 mt-1.5 flex items-center gap-1.5 bg-rose-50 border border-rose-200 px-2.5 py-1.5 rounded-lg">
+            <i data-lucide="alert-circle" class="w-4 h-4 shrink-0 text-rose-600"></i>
+            <span id="db-item-name-dup-text"></span>
+          </div>
+        ` : ''}
       </div>
     `;}).join('');
 
@@ -1028,6 +1035,40 @@ const MasterDB = {
       modal.classList.remove('opacity-0');
       document.getElementById('db-card').classList.remove('scale-95');
     }, 10);
+  },
+
+  _nameCheckTimeout: null,
+  onItemNameInput(val) {
+    clearTimeout(this._nameCheckTimeout);
+    const warningEl = document.getElementById('db-item-name-dup-warning');
+    const warningText = document.getElementById('db-item-name-dup-text');
+    const inputEl = document.getElementById('db-field-item_name');
+
+    const cleanName = (val || '').trim();
+    if (!cleanName || cleanName.length < 2) {
+      if (warningEl) warningEl.classList.add('hidden');
+      if (inputEl) inputEl.classList.remove('border-rose-500', 'focus:ring-rose-200', 'bg-rose-50/20');
+      return;
+    }
+
+    this._nameCheckTimeout = setTimeout(async () => {
+      const id = document.getElementById('db-id')?.value;
+      const targetCat = this._editingCatSlug || (this.currentCategory !== 'all' ? this.currentCategory : (this.categories[0]?.id || 'panels'));
+      try {
+        const dup = await window.api.findProductByName(cleanName, targetCat, id ? parseInt(id) : null);
+        if (dup && inputEl && inputEl.value.trim().toLowerCase() === cleanName.toLowerCase()) {
+          if (warningEl && warningText) {
+            warningText.innerHTML = `Item <b>"${dup.item_name}"</b> is already in stock under <b>${dup.category_label || dup.slug}</b>. Duplicate items cannot be added.`;
+            warningEl.classList.remove('hidden');
+            if (window.lucide) lucide.createIcons();
+          }
+          inputEl.classList.add('border-rose-500', 'focus:ring-rose-200', 'bg-rose-50/20');
+        } else {
+          if (warningEl) warningEl.classList.add('hidden');
+          if (inputEl) inputEl.classList.remove('border-rose-500', 'focus:ring-rose-200', 'bg-rose-50/20');
+        }
+      } catch(e) {}
+    }, 250);
   },
 
   updateFormProfits() {
@@ -1118,6 +1159,35 @@ const MasterDB = {
       data[f] = document.getElementById(`db-field-${f}`).value;
     });
 
+    const itemName = (data.item_name || '').trim();
+    if (!itemName) {
+      app.showAlert({
+        title: 'Missing Item Name',
+        message: 'Please enter an item name.'
+      });
+      return;
+    }
+    data.item_name = itemName;
+
+    // Validate duplicate item in stock across categories
+    try {
+      const dup = await window.api.findProductByName(itemName, targetCat, id ? parseInt(id) : null);
+      if (dup) {
+        app.showAlert({
+          title: 'Duplicate Item in Stock',
+          message: `An item named <b>"${dup.item_name || itemName}"</b> is already in stock under <b>${dup.category_label || dup.slug}</b>.<br><br>Duplicate stock items cannot be added.`
+        });
+        const inputEl = document.getElementById('db-field-item_name');
+        if (inputEl) {
+          inputEl.focus();
+          inputEl.select();
+        }
+        return;
+      }
+    } catch (checkErr) {
+      console.error('Duplicate check error:', checkErr);
+    }
+
     app.showLoading();
     try {
       if (id) {
@@ -1139,6 +1209,10 @@ const MasterDB = {
       await this.loadData();
     } catch(err) {
       console.error(err);
+      app.showAlert({
+        title: 'Cannot Save Item',
+        message: err.message || 'An error occurred while saving the item.'
+      });
     } finally {
       app.hideLoading();
     }

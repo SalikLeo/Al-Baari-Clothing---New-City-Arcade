@@ -57,6 +57,7 @@ ipcMain.handle('get-products', (event, category) => db.getProducts(category));
 ipcMain.handle('add-product', (event, category, data) => db.addProduct(category, data));
 ipcMain.handle('update-product', (event, category, id, data) => db.updateProduct(category, id, data));
 ipcMain.handle('delete-product', (event, category, id) => db.deleteProduct(category, id));
+ipcMain.handle('find-product-by-name', (event, name, excludeCategory, excludeId) => db.findProductByName(name, excludeCategory, excludeId));
 ipcMain.handle('get-category-labels', () => db.getCategoryLabels());
 ipcMain.handle('get-category-stats', () => db.getCategoryStats());
 ipcMain.handle('update-category-label', (event, slug, label) => db.updateCategoryLabel(slug, label));
