@@ -333,7 +333,6 @@ window.SalesForm = {
                   <tr>
                     <th class="py-1.5 px-2 w-10 text-center border-r border-slate-300">#</th>
                     <th class="py-1.5 px-3 border-r border-slate-300">Item Description</th>
-                    <th class="py-1.5 px-2 w-24 text-right border-r border-slate-300">L.Cost</th>
                     <th class="py-1.5 px-2 w-28 text-center border-r border-slate-300">Qty</th>
                     <th class="py-1.5 px-2 w-28 text-right border-r border-slate-300">Rate (Rs.)</th>
                     <th class="py-1.5 px-2 w-32 text-center border-r border-slate-300">Discount</th>
@@ -1541,14 +1540,6 @@ window.SalesForm = {
               <span class="font-black text-slate-900 text-xs truncate max-w-[280px]">${item.item_name}</span>
               ${categoryLabel ? `<span class="text-[9px] font-bold text-slate-400 uppercase tracking-tight font-sans">(${categoryLabel})</span>` : ''}
               <span class="text-[9px] font-bold ${maxStock > 0 ? 'text-emerald-700 bg-emerald-50 border-emerald-200/60' : 'text-rose-600 bg-rose-50 border-rose-200/60'} px-1.5 py-0.2 rounded border tabular-nums ml-auto sm:ml-0">${maxStock} in stock</span>
-            </div>
-          </td>
-
-          <!-- L.Cost Column -->
-          <td class="py-1.5 px-2 text-right border-r border-slate-200 bg-slate-50/40">
-            <div class="inline-flex items-center justify-end">
-              <span class="text-[10px] font-bold text-slate-400 mr-1">Rs.</span>
-              <span class="font-black text-slate-700 text-xs tabular-nums font-display">${app.formatAmount(latestCost)}</span>
             </div>
           </td>
 
