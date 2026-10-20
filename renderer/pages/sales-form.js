@@ -186,15 +186,15 @@ window.SalesForm = {
         </div>
 
         <!-- Main Body: Compact Customer & Quick Settings Header + Search Line + High-Speed Table -->
-        <div class="flex-1 flex flex-col p-4 gap-3 min-h-0 overflow-hidden">
+        <div class="flex-1 flex flex-col px-3.5 py-2 gap-2 min-h-0 overflow-hidden">
           
           <!-- Top Row: Customer Selection & 11-Digit Phone Number -->
-          <div class="bg-white rounded-2xl p-3.5 shadow-sm border border-slate-200/80 shrink-0">
-            <div class="grid grid-cols-1 md:grid-cols-12 gap-3 items-center">
+          <div class="bg-white rounded-xl px-3 py-2 shadow-xs border border-slate-200/80 shrink-0">
+            <div class="grid grid-cols-1 md:grid-cols-12 gap-2.5 items-center">
               
               <!-- Customer Name Custom Dropdown Field -->
               <div class="md:col-span-7 relative" id="sf-customer-container">
-                <label class="block text-[10px] font-black uppercase text-slate-400 tracking-wider mb-1 flex items-center justify-between">
+                <label class="block text-[10px] font-black uppercase text-slate-400 tracking-wider mb-0.5 flex items-center justify-between">
                   <span class="flex items-center gap-1.5">
                     Customer Name <span class="text-rose-500">*</span>
                     <kbd class="px-1.5 py-0.5 rounded bg-amber-100 text-amber-900 border border-amber-300 font-mono text-[9px] font-black">Press F1 Key</kbd>
@@ -218,26 +218,26 @@ window.SalesForm = {
                          value="${this.customerName || ''}" 
                          placeholder="Search or enter customer name..." 
                          ${this.customerId ? 'readonly' : ''} 
-                         class="w-full pl-9 pr-9 py-2 ${this.customerId ? 'bg-amber-50/70 border-amber-300 font-black cursor-default text-slate-900 shadow-sm' : 'bg-slate-50 border-slate-200 font-bold text-slate-800 focus:bg-white focus:border-amber-500 focus:ring-2 focus:ring-amber-100'} border rounded-xl text-xs outline-none transition-all">
+                         class="w-full pl-8 pr-8 py-1.5 ${this.customerId ? 'bg-amber-50/70 border-amber-300 font-black cursor-default text-slate-900 shadow-sm' : 'bg-slate-50 border-slate-200 font-bold text-slate-800 focus:bg-white focus:border-amber-500 focus:ring-2 focus:ring-amber-100'} border rounded-xl text-xs outline-none transition-all">
                   
                   <button type="button" 
                           id="sf-customer-clear-btn" 
                           onclick="SalesForm.clearSelectedCustomer()" 
                           title="Clear and select another customer"
-                          class="absolute right-2.5 top-1/2 -translate-y-1/2 w-5 h-5 rounded-md hover:bg-slate-200 text-slate-400 hover:text-slate-700 flex items-center justify-center transition-all cursor-pointer ${this.customerName ? '' : 'hidden'}">
+                          class="absolute right-2 top-1/2 -translate-y-1/2 w-5 h-5 rounded-md hover:bg-slate-200 text-slate-400 hover:text-slate-700 flex items-center justify-center transition-all cursor-pointer ${this.customerName ? '' : 'hidden'}">
                     <i data-lucide="x" class="w-3.5 h-3.5"></i>
                   </button>
                 </div>
 
                 <!-- Custom Uniform Customer Dropdown -->
-                <div id="sf-customer-dropdown" class="absolute top-full left-0 right-0 mt-1.5 bg-white border border-slate-200 rounded-xl shadow-2xl overflow-hidden hidden max-h-[280px] overflow-y-auto z-50">
+                <div id="sf-customer-dropdown" class="absolute top-full left-0 right-0 mt-1 bg-white border border-slate-200 rounded-xl shadow-2xl overflow-hidden hidden max-h-[280px] overflow-y-auto z-50">
                   <!-- Injected dynamically via renderCustomerDropdown() -->
                 </div>
               </div>
 
               <!-- Contact Phone Number -->
               <div class="md:col-span-5 relative">
-                <label class="block text-[10px] font-black uppercase text-slate-400 tracking-wider mb-1">
+                <label class="block text-[10px] font-black uppercase text-slate-400 tracking-wider mb-0.5">
                   Contact Phone
                 </label>
                 <div class="relative">
@@ -253,7 +253,7 @@ window.SalesForm = {
                          onfocus="SalesForm.handleCustomerPhoneFocus()" 
                          onclick="SalesForm.handleCustomerPhoneFocus()" 
                          ${this.customerId ? 'readonly' : ''} 
-                         class="w-full pl-8 pr-2 py-2 ${this.customerId ? 'bg-slate-100/90 text-slate-700 font-black cursor-default border-slate-200' : 'bg-slate-50 text-slate-800 font-bold focus:bg-white focus:border-amber-500 border-slate-200'} border rounded-xl text-xs outline-none transition-all">
+                         class="w-full pl-8 pr-2 py-1.5 ${this.customerId ? 'bg-slate-100/90 text-slate-700 font-black cursor-default border-slate-200' : 'bg-slate-50 text-slate-800 font-bold focus:bg-white focus:border-amber-500 border-slate-200'} border rounded-xl text-xs outline-none transition-all">
                 </div>
               </div>
 
@@ -262,8 +262,8 @@ window.SalesForm = {
 
           <!-- Product Search Box with Instant 1-Letter Dropdown -->
           <div class="relative shrink-0 z-20" id="sf-search-container">
-            <div class="relative bg-white rounded-2xl shadow-sm border-2 border-amber-400 focus-within:ring-4 focus-within:ring-amber-100 transition-all">
-              <i data-lucide="search" class="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-amber-500"></i>
+            <div class="relative bg-white rounded-xl shadow-xs border-2 border-amber-400 focus-within:ring-3 focus-within:ring-amber-100 transition-all">
+              <i data-lucide="search" class="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-amber-500"></i>
               <input type="text" 
                      id="sf-fast-item-search" 
                      autocomplete="off"
@@ -272,53 +272,53 @@ window.SalesForm = {
                      onclick="SalesForm.handleSearchFocus()"
                      onkeydown="SalesForm.handleSearchKeyDown(event)"
                      placeholder="Search item name or category..." 
-                     class="w-full pl-12 pr-36 py-3 bg-transparent text-slate-900 font-bold text-sm outline-none placeholder:text-slate-400">
-              <div class="absolute right-3.5 top-1/2 -translate-y-1/2 flex items-center gap-2">
+                     class="w-full pl-10 pr-32 py-2 bg-transparent text-slate-900 font-bold text-sm outline-none placeholder:text-slate-400">
+              <div class="absolute right-3 top-1/2 -translate-y-1/2 flex items-center gap-2">
                 <button type="button" 
                         id="sf-item-search-clear-btn" 
                         onclick="SalesForm.clearSearchInput()" 
                         title="Clear search text"
-                        class="w-6 h-6 rounded-md hover:bg-slate-100 text-slate-400 hover:text-slate-700 flex items-center justify-center transition-all cursor-pointer hidden">
-                  <i data-lucide="x" class="w-4 h-4"></i>
+                        class="w-5 h-5 rounded-md hover:bg-slate-100 text-slate-400 hover:text-slate-700 flex items-center justify-center transition-all cursor-pointer hidden">
+                  <i data-lucide="x" class="w-3.5 h-3.5"></i>
                 </button>
-                <kbd class="px-2 py-1 rounded-lg bg-amber-100 text-amber-900 border border-amber-300 font-mono text-[10px] font-black shadow-2xs pointer-events-none select-none">Press F2 Key</kbd>
+                <kbd class="px-1.5 py-0.5 rounded-lg bg-amber-100 text-amber-900 border border-amber-300 font-mono text-[9px] font-black shadow-2xs pointer-events-none select-none">Press F2 Key</kbd>
               </div>
             </div>
 
             <!-- Autocomplete Dropdown List (Tight single-line rows) -->
-            <div id="sf-search-dropdown" class="absolute top-full left-0 right-0 mt-1.5 bg-white border border-slate-200 rounded-2xl shadow-2xl overflow-hidden hidden max-h-[420px] overflow-y-auto z-50">
+            <div id="sf-search-dropdown" class="absolute top-full left-0 right-0 mt-1 bg-white border border-slate-200 rounded-xl shadow-2xl overflow-hidden hidden max-h-[420px] overflow-y-auto z-50">
               <!-- Injected dynamically via renderSearchDropdown() -->
             </div>
           </div>
 
           <!-- Cart Items Table: Full Width Fast Billing Grid -->
-          <div class="flex-1 bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden flex flex-col min-h-0">
-            <div class="p-2.5 border-b border-slate-100 bg-slate-50 flex justify-between items-center shrink-0 flex-wrap gap-2">
+          <div class="flex-1 bg-white rounded-xl shadow-xs border border-slate-200 overflow-hidden flex flex-col min-h-0">
+            <div class="px-3 py-1.5 border-b border-slate-100 bg-slate-50 flex justify-between items-center shrink-0 flex-wrap gap-2">
               <div class="flex items-center gap-2">
                 <i data-lucide="shopping-cart" class="w-4 h-4 text-amber-500"></i>
                 <h3 class="font-black text-sm text-slate-800 tracking-tight" id="sf-cart-header-title">Invoice Items (0)</h3>
               </div>
               
-              <div class="flex items-center gap-2.5 flex-wrap">
+              <div class="flex items-center gap-2 flex-wrap">
                 <!-- Clear Bill Button -->
                 <button type="button" 
                         onclick="SalesForm.confirmClearForm()" 
-                        class="px-2.5 py-1 text-[11px] font-bold text-rose-600 hover:text-white bg-rose-50 hover:bg-rose-600 border border-rose-200 hover:border-rose-600 rounded-xl transition-all flex items-center gap-1 shadow-2xs cursor-pointer" 
+                        class="px-2 py-0.5 text-[11px] font-bold text-rose-600 hover:text-white bg-rose-50 hover:bg-rose-600 border border-rose-200 hover:border-rose-600 rounded-lg transition-all flex items-center gap-1 shadow-2xs cursor-pointer" 
                         title="Clear all added items and start a fresh bill">
-                  <i data-lucide="rotate-ccw" class="w-3.5 h-3.5"></i>
+                  <i data-lucide="rotate-ccw" class="w-3 h-3"></i>
                   <span>Clear Bill</span>
                 </button>
 
                 <!-- Invoice Number Field -->
-                <div class="flex items-center gap-1.5 bg-white border border-slate-200 px-2 py-1 rounded-xl shadow-xs">
+                <div class="flex items-center gap-1.5 bg-white border border-slate-200 px-1.5 py-0.5 rounded-lg shadow-xs">
                   <span class="text-slate-400 text-[10px] uppercase font-black tracking-wider">INV:</span>
-                  <input type="text" id="sf-sale-number" value="${this.saleNumber}" class="w-16 bg-slate-50 border border-slate-200 text-slate-900 font-black text-xs uppercase tabular-nums focus:outline-none focus:border-amber-500 px-1 py-0.5 rounded-lg text-center" title="Invoice Number">
+                  <input type="text" id="sf-sale-number" value="${this.saleNumber}" class="w-16 bg-slate-50 border border-slate-200 text-slate-900 font-black text-xs uppercase tabular-nums focus:outline-none focus:border-amber-500 px-1 py-0.5 rounded-md text-center" title="Invoice Number">
                 </div>
 
                 <!-- Payment Method (Cash / Online) -->
-                <div class="flex items-center gap-1.5 bg-white border border-slate-200 rounded-xl px-2 py-1 shadow-xs">
+                <div class="flex items-center gap-1.5 bg-white border border-slate-200 rounded-lg px-1.5 py-0.5 shadow-xs">
                   <span class="text-xs font-bold text-slate-600">Method:</span>
-                  <div class="flex bg-slate-100 p-0.5 rounded-lg border border-slate-200">
+                  <div class="flex bg-slate-100 p-0.5 rounded-md border border-slate-200">
                     <button type="button" id="btn-method-cash" onclick="SalesForm.setPaymentMethod('Cash')" class="px-2 py-0.5 text-[10px] font-black rounded ${this.paymentMethod === 'Cash' ? 'bg-slate-900 text-white shadow-xs' : 'text-slate-600 hover:text-slate-900'}">CASH</button>
                     <button type="button" id="btn-method-online" onclick="SalesForm.setPaymentMethod('Online')" class="px-2 py-0.5 text-[10px] font-black rounded ${this.paymentMethod === 'Online' ? 'bg-indigo-600 text-white shadow-xs' : 'text-slate-600 hover:text-slate-900'}">ONLINE</button>
                   </div>
@@ -329,15 +329,15 @@ window.SalesForm = {
             <!-- Table Header & Scrollable Body -->
             <div class="flex-1 overflow-y-auto custom-scrollbar">
               <table class="w-full text-left border-collapse" id="sf-cart-table">
-                <thead class="bg-slate-100 sticky top-0 z-10 border-b-2 border-slate-300 text-[10px] font-black text-slate-600 uppercase tracking-wider">
+                <thead class="bg-slate-100 sticky top-0 z-10 border-b border-slate-300 text-[10px] font-black text-slate-600 uppercase tracking-wider">
                   <tr>
-                    <th class="py-1.5 px-2 w-10 text-center border-r border-slate-300">#</th>
-                    <th class="py-1.5 px-3 border-r border-slate-300">Item Description</th>
-                    <th class="py-1.5 px-2 w-28 text-center border-r border-slate-300">Qty</th>
-                    <th class="py-1.5 px-2 w-28 text-right border-r border-slate-300">Rate (Rs.)</th>
-                    <th class="py-1.5 px-2 w-32 text-center border-r border-slate-300">Discount</th>
-                    <th class="py-1.5 px-3 w-28 text-right border-r border-slate-300">Line Total</th>
-                    <th class="py-1.5 px-2 w-16 text-center">Action</th>
+                    <th class="py-1 px-2 w-10 text-center border-r border-slate-300">#</th>
+                    <th class="py-1 px-3 border-r border-slate-300">Item Description</th>
+                    <th class="py-1 px-2 w-28 text-center border-r border-slate-300">Qty</th>
+                    <th class="py-1 px-2 w-28 text-right border-r border-slate-300">Rate (Rs.)</th>
+                    <th class="py-1 px-2 w-32 text-center border-r border-slate-300">Discount</th>
+                    <th class="py-1 px-3 w-28 text-right border-r border-slate-300">Line Total</th>
+                    <th class="py-1 px-2 w-16 text-center">Action</th>
                   </tr>
                 </thead>
                 <tbody id="sf-cart-tbody" class="divide-y divide-slate-200 border-b border-slate-200">
@@ -355,14 +355,14 @@ window.SalesForm = {
           </div>
 
           <!-- Bottom Bar: Totals, Discounts, Partial/Received Amount & Complete Sale -->
-          <div class="bg-white rounded-2xl p-4 shadow-sm border border-slate-200/80 shrink-0">
-            <div class="flex flex-wrap items-center justify-between gap-4">
+          <div class="bg-white rounded-xl px-3 py-2 shadow-xs border border-slate-200/80 shrink-0">
+            <div class="flex flex-wrap items-center justify-between gap-2.5">
               
               <!-- Left side: Additional Discount, Adv Tax & Summary Breakdown -->
-              <div class="flex items-center gap-3 flex-wrap">
+              <div class="flex items-center gap-2.5 flex-wrap">
 
                 <!-- Additional Discount Input (With Checkbox to show/hide) -->
-                <div class="flex items-center gap-1.5 bg-slate-50 border border-slate-200 rounded-xl px-2.5 py-1.5 transition-all">
+                <div class="flex items-center gap-1.5 bg-slate-50 border border-slate-200 rounded-lg px-2 py-1 transition-all">
                   <label class="flex items-center gap-1.5 cursor-pointer select-none" title="Enable additional discount on bill">
                     <input type="checkbox" 
                            id="sf-disc-enable" 
@@ -383,12 +383,12 @@ window.SalesForm = {
                            oninput="SalesForm.onAdditionalDiscountInput(this.value)" 
                            min="0" 
                            step="any" 
-                           class="w-16 bg-white border border-slate-200 rounded-lg px-2 py-1 text-xs text-right font-black text-slate-900 focus:border-amber-500 outline-none">
+                           class="w-16 bg-white border border-slate-200 rounded-md px-1.5 py-0.5 text-xs text-right font-black text-slate-900 focus:border-amber-500 outline-none">
                   </div>
                 </div>
 
                 <!-- Adv Tax Input (With Checkbox to show/hide) -->
-                <div class="flex items-center gap-1.5 bg-slate-50 border border-slate-200 rounded-xl px-2.5 py-1.5 transition-all">
+                <div class="flex items-center gap-1.5 bg-slate-50 border border-slate-200 rounded-lg px-2 py-1 transition-all">
                   <label class="flex items-center gap-1.5 cursor-pointer select-none" title="Include tax in bill">
                     <input type="checkbox" 
                            id="sf-tax-enable" 
@@ -405,13 +405,13 @@ window.SalesForm = {
                            oninput="SalesForm.onTaxPercentInput()" 
                            min="0" 
                            step="any" 
-                           class="w-14 bg-white border border-slate-200 rounded-lg px-2 py-1 text-xs text-center font-black text-slate-900 focus:border-amber-500 outline-none">
+                           class="w-14 bg-white border border-slate-200 rounded-md px-1.5 py-0.5 text-xs text-center font-black text-slate-900 focus:border-amber-500 outline-none">
                     <span class="text-xs font-black text-slate-500">%</span>
                   </div>
                 </div>
 
                 <!-- Received Amount (Partial / Full payment) -->
-                <div class="flex items-center gap-2 bg-amber-50/70 border border-amber-300/80 rounded-xl px-3 py-1.5">
+                <div class="flex items-center gap-1.5 bg-amber-50/70 border border-amber-300/80 rounded-lg px-2.5 py-1">
                   <span class="text-xs font-black text-amber-900 flex items-center gap-1">
                     Received (Rs.):
                     <kbd class="px-1 py-0.2 rounded bg-amber-200/90 text-amber-950 font-mono text-[9px] font-black border border-amber-300">F3</kbd>
@@ -423,11 +423,11 @@ window.SalesForm = {
                          oninput="SalesForm.onReceivedInput(this.value)" 
                          min="0" 
                          step="any" 
-                         class="w-28 bg-white border border-amber-300 rounded-lg px-2.5 py-1 text-xs text-right font-black text-slate-900 focus:border-amber-500 focus:ring-2 focus:ring-amber-200 outline-none font-display">
+                         class="w-28 bg-white border border-amber-300 rounded-md px-2 py-0.5 text-xs text-right font-black text-slate-900 focus:border-amber-500 focus:ring-2 focus:ring-amber-200 outline-none font-display">
                 </div>
 
                 <!-- Cash Rec. (Quick Calculator for Customer Cash Handed & Change Return) -->
-                <div class="flex items-center gap-2 bg-sky-50/80 border border-sky-300/90 rounded-xl px-2.5 py-1.5 shadow-2xs">
+                <div class="flex items-center gap-1.5 bg-sky-50/80 border border-sky-300/90 rounded-lg px-2 py-1 shadow-2xs">
                   <span class="text-xs font-black text-sky-950 flex items-center gap-1">
                     Cash Rec.:
                     <kbd class="px-1 py-0.2 rounded bg-sky-200/90 text-sky-950 font-mono text-[9px] font-black border border-sky-300">F4</kbd>
@@ -439,13 +439,13 @@ window.SalesForm = {
                          oninput="SalesForm.onCashTenderedInput(this.value)" 
                          min="0" 
                          step="any" 
-                         class="w-24 bg-white border border-sky-300 rounded-lg px-2 py-1 text-xs text-right font-black text-slate-900 focus:border-sky-500 focus:ring-2 focus:ring-sky-200 outline-none font-display"
+                         class="w-24 bg-white border border-sky-300 rounded-md px-2 py-0.5 text-xs text-right font-black text-slate-900 focus:border-sky-500 focus:ring-2 focus:ring-sky-200 outline-none font-display"
                          title="Enter total cash given by customer to quickly calculate return change (Press F4)">
-                  <span id="sf-return-change-badge" class="hidden text-xs font-black px-2 py-0.5 rounded-lg bg-emerald-600 text-white font-display shadow-2xs tabular-nums"></span>
+                  <span id="sf-return-change-badge" class="hidden text-xs font-black px-1.5 py-0.2 rounded-md bg-emerald-600 text-white font-display shadow-2xs tabular-nums"></span>
                 </div>
 
                 <!-- Subtotal, Discounts and Tax text -->
-                <div class="flex items-center gap-3 text-xs font-bold text-slate-500 pl-1 border-l border-slate-200">
+                <div class="flex items-center gap-2.5 text-xs font-bold text-slate-500 pl-1 border-l border-slate-200">
                   <div>Subtotal: <span class="text-slate-800 font-black" id="sf-subtotal">Rs. 0</span></div>
                   <div>Disc: <span class="text-rose-500 font-black" id="sf-discount-amount">- Rs. 0</span></div>
                   <div id="sf-tax-breakdown-row" class="${this.isTaxEnabled ? '' : 'hidden'}">Tax: <span class="text-amber-600 font-black" id="sf-tax-amount">+ Rs. 0</span></div>
@@ -453,13 +453,13 @@ window.SalesForm = {
               </div>
 
               <!-- Right side: Grand Total, Khata Due / Change & Checkout Action Buttons -->
-              <div class="flex items-center gap-4 ml-auto">
+              <div class="flex items-center gap-3 ml-auto">
                 <div class="text-right">
-                  <div class="flex items-center justify-end gap-2">
-                    <span class="text-[10px] font-black uppercase tracking-wider text-slate-400 block">Total</span>
+                  <div class="flex items-center justify-end gap-1.5">
+                    <span class="text-[10px] font-black uppercase tracking-wider text-slate-400 block leading-tight">Total</span>
                     <span id="sf-payment-status-badge" class="hidden text-[10px] font-black px-1.5 py-0.5 rounded-md"></span>
                   </div>
-                  <span class="text-2xl font-black text-emerald-600 font-display tabular-nums" id="sf-grand-total">Rs. 0</span>
+                  <span class="text-2xl font-black text-emerald-600 font-display tabular-nums leading-tight block" id="sf-grand-total">Rs. 0</span>
                   <div id="sf-khata-due-msg" class="text-[11px] font-black text-rose-600 font-display hidden">
                     Remaining to Khata: Rs. 0
                   </div>
@@ -469,21 +469,21 @@ window.SalesForm = {
                 </div>
 
                 ${this.editingSaleId ? `
-                  <button type="button" onclick="app.navigate('proposals')" class="px-4 py-3 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs flex items-center gap-2 transition-all cursor-pointer">
+                  <button type="button" onclick="app.navigate('proposals')" class="px-3.5 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs flex items-center gap-1.5 transition-all cursor-pointer">
                     <i data-lucide="x" class="w-4 h-4"></i>
                     Cancel
                   </button>
                   <button type="button" 
                           id="sf-save-btn"
                           onclick="SalesForm.completeSale(false)" 
-                          class="px-5 py-3 rounded-xl bg-slate-800 hover:bg-slate-700 text-white font-black text-xs flex items-center gap-2 shadow-md hover:shadow-lg active:scale-[0.98] transition-all cursor-pointer">
+                          class="px-4 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-white font-black text-xs flex items-center gap-1.5 shadow-md hover:shadow-lg active:scale-[0.98] transition-all cursor-pointer">
                     <i data-lucide="save" class="w-4 h-4 text-emerald-400"></i>
                     <span>SAVE</span>
                   </button>
                   <button type="button" 
                           id="sf-complete-btn"
                           onclick="SalesForm.completeSale(true)" 
-                          class="px-5 py-3 rounded-xl bg-slate-900 hover:bg-slate-800 text-white font-black text-xs flex items-center gap-2 shadow-lg hover:shadow-xl active:scale-[0.98] transition-all cursor-pointer">
+                          class="px-4 py-2 rounded-xl bg-slate-900 hover:bg-slate-800 text-white font-black text-xs flex items-center gap-1.5 shadow-md hover:shadow-lg active:scale-[0.98] transition-all cursor-pointer">
                     <i data-lucide="printer" class="w-4 h-4 text-amber-400"></i>
                     <span>SAVE & PRINT (F5)</span>
                   </button>
@@ -491,7 +491,7 @@ window.SalesForm = {
                   <button type="button" 
                           id="sf-complete-btn"
                           onclick="SalesForm.completeSale(true)" 
-                          class="px-6 py-3 rounded-xl bg-slate-900 hover:bg-slate-800 text-white font-black text-sm flex items-center gap-3 shadow-lg hover:shadow-xl active:scale-[0.98] transition-all cursor-pointer">
+                          class="px-5 py-2.5 rounded-xl bg-slate-900 hover:bg-slate-800 text-white font-black text-sm flex items-center gap-2.5 shadow-md hover:shadow-lg active:scale-[0.98] transition-all cursor-pointer">
                     <i data-lucide="check-circle" class="w-5 h-5 text-amber-400"></i>
                     <span>COMPLETE & PRINT (F5)</span>
                   </button>
@@ -1530,13 +1530,13 @@ window.SalesForm = {
       return `
         <tr class="hover:bg-amber-50/40 transition-colors group">
           <!-- Row Number -->
-          <td class="py-1.5 px-2 text-center text-xs font-bold text-slate-500 tabular-nums border-r border-slate-200">
+          <td class="py-1 px-2 text-center text-xs font-bold text-slate-500 tabular-nums border-r border-slate-200">
             ${idx + 1}
           </td>
 
           <!-- Item Name & Category / Stock Info -->
-          <td class="py-1.5 px-3 border-r border-slate-200">
-            <div class="flex items-center gap-2 flex-wrap">
+          <td class="py-1 px-3 border-r border-slate-200">
+            <div class="flex items-center gap-1.5 flex-wrap">
               <span class="font-black text-slate-900 text-xs truncate max-w-[280px]">${item.item_name}</span>
               ${categoryLabel ? `<span class="text-[9px] font-bold text-slate-400 uppercase tracking-tight font-sans">(${categoryLabel})</span>` : ''}
               <span class="text-[9px] font-bold ${maxStock > 0 ? 'text-emerald-700 bg-emerald-50 border-emerald-200/60' : 'text-rose-600 bg-rose-50 border-rose-200/60'} px-1.5 py-0.2 rounded border tabular-nums ml-auto sm:ml-0">${maxStock} in stock</span>
@@ -1544,8 +1544,8 @@ window.SalesForm = {
           </td>
 
           <!-- Qty Input with Unit -->
-          <td class="py-1.5 px-2 text-center border-r border-slate-200">
-            <div class="inline-flex items-center justify-center gap-1.5">
+          <td class="py-1 px-2 text-center border-r border-slate-200">
+            <div class="inline-flex items-center justify-center gap-1">
               <input type="number" 
                      id="cart-qty-input-${idx}"
                      value="${item.qty}"
@@ -1555,13 +1555,13 @@ window.SalesForm = {
                      onkeydown="SalesForm.handleCartKeyDown(event, ${idx}, 'qty')"
                      oninput="SalesForm.updateCartQty(${idx}, this.value, this)"
                      onblur="SalesForm.onCartQtyBlur(${idx}, this)"
-                     class="w-12 bg-transparent focus:bg-amber-100/70 border-b border-transparent focus:border-amber-500 text-right font-black text-slate-900 text-xs outline-none transition-colors tabular-nums py-0.5 rounded-sm">
+                     class="w-12 bg-transparent focus:bg-amber-100/70 border-b border-transparent focus:border-amber-500 text-right font-black text-slate-900 text-xs outline-none transition-colors tabular-nums py-0 rounded-sm">
               <span class="w-14 text-left text-[10px] font-bold text-slate-400 uppercase tracking-tight truncate shrink-0">${item.unit || 'pcs'}</span>
             </div>
           </td>
 
           <!-- Price Input -->
-          <td class="py-1.5 px-2 text-right border-r border-slate-200">
+          <td class="py-1 px-2 text-right border-r border-slate-200">
             <div class="inline-flex items-center justify-end">
               <span class="text-[10px] font-bold text-slate-400 mr-1">Rs.</span>
               <input type="number" 
@@ -1570,12 +1570,12 @@ window.SalesForm = {
                      step="any"
                      onkeydown="SalesForm.handleCartKeyDown(event, ${idx}, 'price')"
                      oninput="SalesForm.updateCartPrice(${idx}, this.value)"
-                     class="w-20 bg-transparent focus:bg-amber-100/70 border-b border-transparent focus:border-amber-500 text-right font-black text-slate-900 text-xs outline-none transition-colors tabular-nums py-0.5 rounded-sm">
+                     class="w-20 bg-transparent focus:bg-amber-100/70 border-b border-transparent focus:border-amber-500 text-right font-black text-slate-900 text-xs outline-none transition-colors tabular-nums py-0 rounded-sm">
             </div>
           </td>
 
           <!-- Discount -->
-          <td class="py-1.5 px-2 border-r border-slate-200">
+          <td class="py-1 px-2 border-r border-slate-200">
             <div class="flex items-center gap-1 justify-center">
               <div class="flex p-0.5 shrink-0 gap-0.5">
                 <button type="button" onclick="SalesForm.toggleItemDiscountType(${idx}, 'flat')" class="px-1 py-0.2 text-[9px] font-black rounded ${item.discountType === 'flat' ? 'bg-slate-900 text-white' : 'text-slate-500 hover:text-slate-900 bg-slate-100'}">RS.</button>
@@ -1589,23 +1589,23 @@ window.SalesForm = {
                      step="any"
                      onkeydown="SalesForm.handleCartKeyDown(event, ${idx}, 'discount')"
                      oninput="SalesForm.updateItemDiscount(${idx}, this.value)"
-                     class="w-14 bg-transparent focus:bg-amber-100/70 border-b border-transparent focus:border-amber-500 text-right font-black text-slate-900 text-xs outline-none transition-colors tabular-nums py-0.5 rounded-sm">
+                     class="w-14 bg-transparent focus:bg-amber-100/70 border-b border-transparent focus:border-amber-500 text-right font-black text-slate-900 text-xs outline-none transition-colors tabular-nums py-0 rounded-sm">
             </div>
           </td>
 
           <!-- Line Total -->
-          <td class="py-1.5 px-3 text-right border-r border-slate-200">
+          <td class="py-1 px-3 text-right border-r border-slate-200">
             <p id="cart-line-discount-${idx}" class="text-[9px] font-bold text-rose-500 leading-none mb-0.5" style="display: ${discountVal > 0 ? 'block' : 'none'}">- ${app.formatCurrency(discountVal)}</p>
             <p class="text-xs font-black text-slate-900 tabular-nums font-display leading-none" id="cart-line-total-${idx}">${app.formatCurrency(subtotal - discountVal)}</p>
           </td>
 
           <!-- Actions -->
-          <td class="py-1.5 px-2 text-center">
-            <div class="flex items-center justify-center gap-1">
-              <button type="button" onclick="SalesForm.resetCartPrice(${idx})" class="p-1 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded transition-colors cursor-pointer" title="Reset Rate">
+          <td class="py-1 px-2 text-center">
+            <div class="flex items-center justify-center gap-0.5">
+              <button type="button" onclick="SalesForm.resetCartPrice(${idx})" class="p-0.5 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded transition-colors cursor-pointer" title="Reset Rate">
                 <i data-lucide="refresh-cw" class="w-3.5 h-3.5"></i>
               </button>
-              <button type="button" onclick="SalesForm.removeFromCart(${idx})" class="p-1 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded transition-colors cursor-pointer" title="Remove Item">
+              <button type="button" onclick="SalesForm.removeFromCart(${idx})" class="p-0.5 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded transition-colors cursor-pointer" title="Remove Item">
                 <i data-lucide="trash-2" class="w-3.5 h-3.5"></i>
               </button>
             </div>
