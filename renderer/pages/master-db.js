@@ -130,6 +130,8 @@ const MasterDB = {
               </thead>
               <tbody id="db-tbody" class="divide-y divide-slate-200 bg-white">
               </tbody>
+              <tfoot id="db-tfoot" class="sticky bottom-0 bg-slate-100 z-10 border-t-2 border-slate-300 font-black text-xs text-slate-900 shadow-md">
+              </tfoot>
             </table>
           </div>
           <!-- Table Footer Pagination Bar -->
@@ -853,6 +855,7 @@ const MasterDB = {
           <th class="px-3 py-2 font-black text-[11px] uppercase tracking-wider text-right text-red-600 border-r border-slate-200 bg-red-50" title="Cost Price">Cost (Rs.)</th>
           <th class="px-3 py-2 font-black text-[11px] uppercase tracking-wider text-right text-green-600 border-r border-slate-200 bg-green-50" title="Sale Price">Sale (Rs.)</th>
           <th class="px-3 py-2 font-black text-[11px] uppercase tracking-wider text-right text-blue-600 border-r border-slate-200 bg-blue-50" title="Profit per Item">Profit (Rs.)</th>
+          <th class="px-3 py-2 font-black text-[11px] uppercase tracking-wider text-right text-purple-700 border-r border-slate-200 bg-purple-50" title="Inventory Value = Stock × Cost">Value (Qty×Cost)</th>
           <th class="px-3 py-2 font-black text-[11px] uppercase tracking-wider text-right bg-slate-100 text-slate-700">Actions</th>
         </tr>
       `;
@@ -870,7 +873,7 @@ const MasterDB = {
     if (!tbody) return;
 
     if (list.length === 0) {
-      tbody.innerHTML = `<tr><td colspan="8" class="px-6 py-12 text-center text-slate-400 border-b border-slate-200 italic font-medium">No items found matching your search.</td></tr>`;
+      tbody.innerHTML = `<tr><td colspan="${cat.fields.length + 7}" class="px-6 py-12 text-center text-slate-400 border-b border-slate-200 italic font-medium">No items found matching your search.</td></tr>`;
     } else {
       const visibleList = list.slice(0, this.displayLimit);
       tbody.innerHTML = visibleList.map((p, index) => {
@@ -878,6 +881,7 @@ const MasterDB = {
         const totalBoxes = p.current_stock || 0;
         const itemSlug = p.slug || (this.currentCategory !== 'all' ? this.currentCategory : (this.categories[0]?.id || 'panels'));
         const catLabel = this.labels[itemSlug] || itemSlug;
+        const itemValue = (Number(p.current_stock) || 0) * (Number(p.cost_price) || 0);
 
         return `
         <tr class="hover:bg-slate-50 transition-colors group border-b border-slate-200">
@@ -906,6 +910,7 @@ const MasterDB = {
           <td class="px-3 py-1 tabular-nums text-xs text-right bg-red-50/30 text-red-700 border-r border-slate-200 font-medium">${app.formatNumber(p.cost_price)}</td>
           <td class="px-3 py-1 tabular-nums text-xs text-right bg-green-50/30 text-green-700 border-r border-slate-200 font-medium">${app.formatNumber(p.retail_price)}</td>
           <td class="px-3 py-1 tabular-nums text-xs text-right bg-blue-50/30 text-blue-700 border-r border-slate-200 font-medium">${app.formatNumber(profit)}</td>
+          <td class="px-3 py-1 tabular-nums text-xs text-right bg-purple-50/30 text-purple-900 border-r border-slate-200 font-black">${app.formatNumber(Math.round(itemValue))}</td>
           <td class="px-3 py-1 text-right font-medium">
             <div class="flex items-center justify-end gap-1.5 transition-opacity">
               <button onclick="app.navigate('rate-list', { slug: '${itemSlug}', id: ${p.id} })" class="p-1.5 text-indigo-600 hover:bg-indigo-50 rounded-lg transition-all cursor-pointer" title="Rate Changes Log &amp; Cost History">
@@ -926,15 +931,56 @@ const MasterDB = {
       `;}).join('');
     }
 
+    // Render bottom row for total in tfoot
+    const tfoot = document.getElementById('db-tfoot');
+    if (tfoot) {
+      if (list.length === 0) {
+        tfoot.innerHTML = '';
+      } else {
+        const totalStock = list.reduce((sum, p) => sum + (Number(p.current_stock) || 0), 0);
+        const totalValue = list.reduce((sum, p) => sum + ((Number(p.current_stock) || 0) * (Number(p.cost_price) || 0)), 0);
+
+        tfoot.innerHTML = `
+          <tr class="bg-slate-100 border-t-2 border-slate-300 font-black text-xs text-slate-900 shadow-sm">
+            <td class="px-2 py-2 text-center text-slate-400 font-black border-r border-slate-300 bg-slate-100">#</td>
+            <td class="px-4 py-2 font-black text-slate-900 border-r border-slate-300 text-xs uppercase tracking-wider bg-slate-100">
+              <div class="flex items-center gap-2">
+                <span class="text-amber-700 uppercase font-black tracking-widest text-[11px]">Total:</span>
+                <span class="text-slate-700 font-bold text-xs">${list.length} Items</span>
+              </div>
+            </td>
+            ${cat.fields.slice(1).map(() => '<td class="border-r border-slate-300 bg-slate-100"></td>').join('')}
+            <td class="px-3 py-2 text-center border-r border-slate-300 font-black text-xs text-amber-950 bg-amber-100/90 whitespace-nowrap">
+              ${app.formatNumber(totalStock)}
+            </td>
+            <td class="px-3 py-2 text-right border-r border-slate-300 font-bold text-xs text-slate-400 bg-slate-100">-</td>
+            <td class="px-3 py-2 text-right border-r border-slate-300 font-bold text-xs text-slate-400 bg-slate-100">-</td>
+            <td class="px-3 py-2 text-right border-r border-slate-300 font-bold text-xs text-slate-400 bg-slate-100">-</td>
+            <td class="px-3 py-2 text-right border-r border-slate-300 font-black text-xs text-purple-950 bg-purple-100 tabular-nums whitespace-nowrap shadow-2xs">
+              Rs. ${app.formatNumber(Math.round(totalValue))}
+            </td>
+            <td class="px-3 py-2 text-right font-medium text-slate-400 bg-slate-100">-</td>
+          </tr>
+        `;
+      }
+    }
+
     // Render footer pagination
     const footer = document.getElementById('db-table-footer');
     if (footer) {
       const total = list.length;
       const current = Math.min(this.displayLimit, total);
       const hasMore = total > current;
+      const totalStock = list.reduce((sum, p) => sum + (Number(p.current_stock) || 0), 0);
+      const totalValue = list.reduce((sum, p) => sum + ((Number(p.current_stock) || 0) * (Number(p.cost_price) || 0)), 0);
+
       footer.innerHTML = `
-        <div class="flex items-center gap-2">
+        <div class="flex items-center gap-2 flex-wrap">
           <span>Showing <span class="text-slate-900 font-black">${current}</span> of <span class="text-slate-900 font-black">${total}</span> items</span>
+          <span class="text-slate-300 mx-1">|</span>
+          <span class="text-slate-600">Total Stock: <span class="text-amber-900 font-black">${app.formatNumber(totalStock)}</span></span>
+          <span class="text-slate-300 mx-1">|</span>
+          <span class="text-slate-600">Total Value: <span class="text-purple-900 font-black">Rs. ${app.formatNumber(Math.round(totalValue))}</span></span>
         </div>
         <div class="flex items-center gap-2">
           ${hasMore ? `
