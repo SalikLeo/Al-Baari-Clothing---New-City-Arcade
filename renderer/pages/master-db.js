@@ -855,7 +855,7 @@ const MasterDB = {
           <th class="px-3 py-2 font-black text-[11px] uppercase tracking-wider text-right text-red-600 border-r border-slate-200 bg-red-50" title="Cost Price">Cost (Rs.)</th>
           <th class="px-3 py-2 font-black text-[11px] uppercase tracking-wider text-right text-green-600 border-r border-slate-200 bg-green-50" title="Sale Price">Sale (Rs.)</th>
           <th class="px-3 py-2 font-black text-[11px] uppercase tracking-wider text-right text-blue-600 border-r border-slate-200 bg-blue-50" title="Profit per Item">Profit (Rs.)</th>
-          <th class="px-3 py-2 font-black text-[11px] uppercase tracking-wider text-right text-purple-700 border-r border-slate-200 bg-purple-50" title="Inventory Value = Stock × Cost">Value (Qty×Cost)</th>
+          <th class="px-3 py-2 font-black text-[11px] uppercase tracking-wider text-right text-purple-700 border-r border-slate-200 bg-purple-50" title="Inventory Value = Stock × Cost">Value</th>
           <th class="px-3 py-2 font-black text-[11px] uppercase tracking-wider text-right bg-slate-100 text-slate-700">Actions</th>
         </tr>
       `;
