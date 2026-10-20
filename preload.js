@@ -10,6 +10,7 @@ contextBridge.exposeInMainWorld('api', {
   getProducts: (category) => ipcRenderer.invoke('get-products', category),
   addProduct: (category, data) => ipcRenderer.invoke('add-product', category, data),
   updateProduct: (category, id, data) => ipcRenderer.invoke('update-product', category, id, data),
+  changeProductCategory: (oldCategory, newCategory, id, data) => ipcRenderer.invoke('change-product-category', oldCategory, newCategory, id, data),
   deleteProduct: (category, id) => ipcRenderer.invoke('delete-product', category, id),
   findProductByName: (name, excludeCategory, excludeId) => ipcRenderer.invoke('find-product-by-name', name, excludeCategory, excludeId),
   getCategoryLabels: () => ipcRenderer.invoke('get-category-labels'),

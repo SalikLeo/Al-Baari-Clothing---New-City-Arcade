@@ -96,6 +96,7 @@ ipcMain.handle('save-settings', (event, data) => db.saveSettings(data));
 ipcMain.handle('get-products', (event, category) => db.getProducts(category));
 ipcMain.handle('add-product', (event, category, data) => db.addProduct(category, data));
 ipcMain.handle('update-product', (event, category, id, data) => db.updateProduct(category, id, data));
+ipcMain.handle('change-product-category', (event, oldCategory, newCategory, id, data) => db.changeProductCategory(oldCategory, newCategory, id, data));
 ipcMain.handle('delete-product', (event, category, id) => db.deleteProduct(category, id));
 ipcMain.handle('find-product-by-name', (event, name, excludeCategory, excludeId) => db.findProductByName(name, excludeCategory, excludeId));
 ipcMain.handle('get-category-labels', () => db.getCategoryLabels());

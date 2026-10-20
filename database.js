@@ -677,6 +677,109 @@ function updateProduct(category, id, data) {
   db.prepare(`UPDATE products_${category} SET ${updates} WHERE id = ?`).run(...values, id);
 }
 
+function changeProductCategory(oldCategory, newCategory, id, data = {}) {
+  if (!oldCategory || !newCategory || !id) {
+    throw new Error('Old category, new category, and item ID are required.');
+  }
+
+  const oldTable = getProductTable(oldCategory);
+  const newTable = getProductTable(newCategory);
+  if (!oldTable) throw new Error(`Source category table for "${oldCategory}" does not exist.`);
+  if (!newTable) throw new Error(`Target category table for "${newCategory}" does not exist.`);
+
+  if (oldCategory === newCategory) {
+    updateProduct(newCategory, id, data);
+    return { id, category: newCategory };
+  }
+
+  const oldRow = db.prepare(`SELECT * FROM ${oldTable} WHERE id = ?`).get(id);
+  if (!oldRow) {
+    throw new Error(`Item not found in category "${oldCategory}".`);
+  }
+
+  const itemName = (data.item_name !== undefined)
+    ? String(data.item_name || '').trim()
+    : String(oldRow.item_name || oldRow.description || '').trim();
+
+  if (itemName) {
+    const existing = findProductByName(itemName, oldCategory, id);
+    if (existing) {
+      const catName = existing.category_label || existing.slug;
+      throw new Error(`Item "${existing.item_name || itemName}" is already in stock under "${catName}". Duplicate items cannot be added.`);
+    }
+  }
+
+  const targetTableInfo = db.prepare(`PRAGMA table_info(${newTable})`).all();
+  const targetColumns = targetTableInfo.map(c => c.name);
+
+  // Merge oldRow with incoming data updates
+  const merged = { ...oldRow, ...data };
+  delete merged.id;
+
+  const cleanData = {};
+  for (const [key, value] of Object.entries(merged)) {
+    if (targetColumns.includes(key)) {
+      cleanData[key] = value;
+    }
+  }
+
+  if (targetColumns.includes('item_name') && cleanData.item_name === undefined) {
+    cleanData.item_name = itemName;
+  }
+  if (targetColumns.includes('wholesale_cost_price') && (cleanData.wholesale_cost_price === undefined || cleanData.wholesale_cost_price === null)) {
+    cleanData.wholesale_cost_price = cleanData.cost_price || 0;
+  }
+  if (targetColumns.includes('wholesale_price') && (cleanData.wholesale_price === undefined || cleanData.wholesale_price === null)) {
+    cleanData.wholesale_price = cleanData.retail_price || 0;
+  }
+
+  const slugToCode = {
+    panels: 'pnl', inverters: 'inv', structures: 'str', cables: 'cab',
+    breakers: 'brk', batteries: 'bat', misc: 'msc', others: 'oth'
+  };
+  const oldCode = slugToCode[oldCategory] || oldCategory;
+
+  let newId = null;
+
+  const migrateTx = db.transaction(() => {
+    // 1. Insert into new category table
+    const keys = Object.keys(cleanData);
+    const placeholders = keys.map(() => '?').join(', ');
+    const insertStmt = db.prepare(`INSERT INTO ${newTable} (${keys.join(', ')}) VALUES (${placeholders})`);
+    const info = insertStmt.run(...Object.values(cleanData));
+    newId = info.lastInsertRowid;
+
+    // 2. Delete from old category table
+    db.prepare(`DELETE FROM ${oldTable} WHERE id = ?`).run(id);
+
+    // 3. Update favorites
+    try {
+      db.prepare('DELETE FROM favorites WHERE category_slug = ? AND product_id = ?').run(newCategory, newId);
+      db.prepare('UPDATE favorites SET category_slug = ?, product_id = ? WHERE category_slug = ? AND product_id = ?').run(newCategory, newId, oldCategory, id);
+    } catch (e) {
+      console.warn('[changeProductCategory] favorites migration error:', e.message);
+    }
+
+    // 4. Update product_rate_history
+    try {
+      db.prepare('UPDATE product_rate_history SET category_slug = ?, product_id = ?, item_name = COALESCE(?, item_name) WHERE category_slug = ? AND product_id = ?').run(newCategory, newId, itemName || null, oldCategory, id);
+    } catch (e) {
+      console.warn('[changeProductCategory] rate history migration error:', e.message);
+    }
+
+    // 5. Update proposal_items
+    try {
+      db.prepare('UPDATE proposal_items SET section = ?, item_id = ? WHERE (section = ? OR section = ?) AND item_id = ?').run(newCategory, newId, oldCategory, oldCode, id);
+    } catch (e) {
+      console.warn('[changeProductCategory] proposal items migration error:', e.message);
+    }
+  });
+
+  migrateTx();
+
+  return { id: newId, category: newCategory };
+}
+
 function deleteProduct(category, id) {
   db.prepare(`DELETE FROM products_${category} WHERE id = ?`).run(id);
 }
@@ -1704,7 +1807,7 @@ module.exports = {
   init, getDbPath, close, backupDatabase, clearAllData,
   addProductStock, getRateHistory, deleteRateHistory, getAllRatesList, markProposalPaid,
   getSettings, saveSettings,
-  getProducts, addProduct, updateProduct, deleteProduct, findProductByName,
+  getProducts, addProduct, updateProduct, deleteProduct, findProductByName, changeProductCategory,
   getCategoryLabels, updateCategoryLabel, searchAllProducts, getCategoryStats, addCategory, deleteCategory,
   getProposals, getProposal, saveProposal, deleteProposal, updateProposalStatus, receivePayment, getNextProposalNumber, getNextCustomerName,
   getAllProposalItems,

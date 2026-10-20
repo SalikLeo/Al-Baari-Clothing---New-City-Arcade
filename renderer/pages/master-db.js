@@ -148,7 +148,16 @@ const MasterDB = {
           <form id="db-form" onsubmit="MasterDB.saveForm(event)" class="space-y-4">
             <input type="hidden" id="db-id">
             
-            <div id="db-dynamic-fields" class="space-y-4"></div>
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-3">
+              <div class="md:col-span-2">
+                <div id="db-dynamic-fields" class="space-y-4"></div>
+              </div>
+              <div>
+                <label class="block text-xs font-bold text-slate-700 uppercase mb-1">Category *</label>
+                <select id="db-category" onchange="MasterDB.onCategorySelectChange(this.value)" class="w-full border border-slate-300 rounded-lg p-2.5 font-bold text-slate-800 bg-white focus:ring-2 focus:ring-accent focus:border-accent text-sm">
+                </select>
+              </div>
+            </div>
 
             <div class="grid grid-cols-1 md:grid-cols-3 gap-3 mt-4 pt-4 border-t border-slate-100">
               <div>
@@ -1002,14 +1011,24 @@ const MasterDB = {
       compSelect.innerHTML = compOpts;
     }
 
+    const catSelect = document.getElementById('db-category');
+    if (catSelect) {
+      const catList = (this.categories && this.categories.length) ? this.categories : [];
+      catSelect.innerHTML = catList.map(c => `
+        <option value="${c.id}" ${c.id === itemSlug ? 'selected' : ''}>${c.label}</option>
+      `).join('');
+      catSelect.value = itemSlug;
+    }
+
     const dynamicContainer = document.getElementById('db-dynamic-fields');
     dynamicContainer.innerHTML = cat.fields.map(f => {
       const isReq = f !== 'description';
+      const labelText = f === 'item_name' ? 'Item Name' : this.capitalize(f);
       const onInputAttr = f === 'item_name' ? 'oninput="MasterDB.onItemNameInput(this.value)"' : '';
       return `
       <div>
-        <label class="block text-sm font-medium text-slate-700 mb-1">${this.capitalize(f)} ${isReq ? '*' : '<span class="text-xs text-slate-400 font-normal">(Optional)</span>'}</label>
-        <input type="text" id="db-field-${f}" ${isReq ? 'required' : ''} ${onInputAttr} class="w-full border border-slate-300 rounded-lg p-2.5 focus:ring-2 focus:ring-accent focus:border-accent" value="${data ? (data[f] || '') : ''}">
+        <label class="block text-xs font-bold text-slate-700 uppercase mb-1">${labelText} ${isReq ? '*' : '<span class="text-[10px] text-slate-400 font-normal lowercase">(optional)</span>'}</label>
+        <input type="text" id="db-field-${f}" ${isReq ? 'required' : ''} ${onInputAttr} class="w-full border border-slate-300 rounded-lg p-2.5 font-bold text-slate-800 focus:ring-2 focus:ring-accent focus:border-accent text-sm" value="${data ? (data[f] || '') : ''}">
         ${f === 'item_name' ? `
           <div id="db-item-name-dup-warning" class="hidden text-xs font-bold text-rose-600 mt-1.5 flex items-center gap-1.5 bg-rose-50 border border-rose-200 px-2.5 py-1.5 rounded-lg">
             <i data-lucide="alert-circle" class="w-4 h-4 shrink-0 text-rose-600"></i>
@@ -1037,6 +1056,20 @@ const MasterDB = {
     }, 10);
   },
 
+  onCategorySelectChange(newCatSlug) {
+    const isEditing = Boolean(document.getElementById('db-id')?.value);
+    const cat = (this.categories || []).find(c => c.id === newCatSlug);
+    const catLabel = cat ? cat.label : newCatSlug;
+    const titleEl = document.getElementById('db-modal-title');
+    if (titleEl) {
+      titleEl.textContent = isEditing ? `Edit ${catLabel} Item` : `Add Item (${catLabel})`;
+    }
+    const nameInput = document.getElementById('db-field-item_name');
+    if (nameInput) {
+      this.onItemNameInput(nameInput.value);
+    }
+  },
+
   _nameCheckTimeout: null,
   onItemNameInput(val) {
     clearTimeout(this._nameCheckTimeout);
@@ -1053,9 +1086,9 @@ const MasterDB = {
 
     this._nameCheckTimeout = setTimeout(async () => {
       const id = document.getElementById('db-id')?.value;
-      const targetCat = this._editingCatSlug || (this.currentCategory !== 'all' ? this.currentCategory : (this.categories[0]?.id || 'panels'));
+      const originalCat = this._editingCatSlug || (this.currentCategory !== 'all' ? this.currentCategory : (this.categories[0]?.id || 'panels'));
       try {
-        const dup = await window.api.findProductByName(cleanName, targetCat, id ? parseInt(id) : null);
+        const dup = await window.api.findProductByName(cleanName, originalCat, id ? parseInt(id) : null);
         if (dup && inputEl && inputEl.value.trim().toLowerCase() === cleanName.toLowerCase()) {
           if (warningEl && warningText) {
             warningText.innerHTML = `Item <b>"${dup.item_name}"</b> is already in stock under <b>${dup.category_label || dup.slug}</b>. Duplicate items cannot be added.`;
@@ -1120,8 +1153,9 @@ const MasterDB = {
     if (form && !form.reportValidity()) return;
 
     const id = document.getElementById('db-id').value;
-    const targetCat = this._editingCatSlug || (this.currentCategory !== 'all' ? this.currentCategory : (this.categories[0]?.id || 'panels'));
-    const cat = this.categories.find(c => c.id === targetCat) || { fields: ['item_name'] };
+    const originalCat = this._editingCatSlug || (this.currentCategory !== 'all' ? this.currentCategory : (this.categories[0]?.id || 'panels'));
+    const selectedCat = document.getElementById('db-category')?.value || originalCat;
+    const cat = this.categories.find(c => c.id === selectedCat) || this.categories.find(c => c.id === originalCat) || { fields: ['item_name'] };
     
     const costPrice = parseFloat(document.getElementById('db-cost').value) || 0;
     const retailPrice = parseFloat(document.getElementById('db-retail').value) || 0;
@@ -1171,7 +1205,7 @@ const MasterDB = {
 
     // Validate duplicate item in stock across categories
     try {
-      const dup = await window.api.findProductByName(itemName, targetCat, id ? parseInt(id) : null);
+      const dup = await window.api.findProductByName(itemName, originalCat, id ? parseInt(id) : null);
       if (dup) {
         app.showAlert({
           title: 'Duplicate Item in Stock',
@@ -1191,13 +1225,18 @@ const MasterDB = {
     app.showLoading();
     try {
       if (id) {
-        await window.api.updateProduct(targetCat, parseInt(id), data);
+        if (selectedCat !== originalCat) {
+          await window.api.changeProductCategory(originalCat, selectedCat, parseInt(id), data);
+          this._editingCatSlug = selectedCat;
+        } else {
+          await window.api.updateProduct(originalCat, parseInt(id), data);
+        }
       } else {
-        await window.api.addProduct(targetCat, data);
+        await window.api.addProduct(selectedCat, data);
       }
       
       if (stayOpen) {
-        this.openForm();
+        this.openForm(null, selectedCat);
         app.showNotification?.({
           title: 'Success',
           message: 'Item saved successfully. You can now enter the next one.',
