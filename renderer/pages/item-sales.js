@@ -250,7 +250,34 @@ window.ItemSales = {
 
     try {
       app.showLoading();
+      const now = new Date();
+      const datePicker = document.getElementById('item-stats-date-picker');
+      const monthSelect = document.getElementById('item-stats-month-select');
+      
+      if (datePicker) {
+        datePicker.value = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
+      }
+      if (monthSelect) {
+        monthSelect.value = now.getMonth() + 1;
+      }
+
+      await this.loadData();
+      this.setPeriodType('day');
+      app.hideLoading();
+    } catch (e) {
+      console.error('[ITEM-SALES] Render error:', e);
+      app.hideLoading();
+    }
+    if (window.lucide) lucide.createIcons();
+  },
+
+  async loadData() {
+    try {
       this.items = await window.api.getAllProposalItems() || [];
+      const tbody = document.getElementById('item-sales-list-body');
+      if (!tbody) {
+        return;
+      }
       const catLabels = await window.api.getCategoryLabels() || [];
       this.categoryLabels = {};
       catLabels.forEach(c => {
@@ -260,6 +287,7 @@ window.ItemSales = {
       // Populate Category Dropdown
       const catSelect = document.getElementById('item-cat-select');
       if (catSelect) {
+        const curCat = catSelect.value || 'All';
         let catOptions = `<option value="All">All Categories</option>`;
         const sections = new Set();
         this.items.forEach(i => {
@@ -270,21 +298,12 @@ window.ItemSales = {
           catOptions += `<option value="${sec}">${label}</option>`;
         });
         catSelect.innerHTML = catOptions;
+        catSelect.value = curCat;
       }
 
-      // Initialize date pickers & period dropdowns
       const now = new Date();
-      const datePicker = document.getElementById('item-stats-date-picker');
-      const monthSelect = document.getElementById('item-stats-month-select');
       const monthYearSelect = document.getElementById('item-stats-month-year-select');
       const yearPicker = document.getElementById('item-stats-year-picker');
-      
-      if (datePicker) {
-        datePicker.value = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
-      }
-      if (monthSelect) {
-        monthSelect.value = now.getMonth() + 1;
-      }
       
       const yearSet = new Set([now.getFullYear()]);
       this.items.forEach(item => {
@@ -296,22 +315,29 @@ window.ItemSales = {
       const years = Array.from(yearSet).sort((a, b) => b - a);
 
       if (monthYearSelect) {
+        const curMYear = monthYearSelect.value;
         monthYearSelect.innerHTML = years.map(y => `<option value="${y}">${y}</option>`).join('');
-        monthYearSelect.value = now.getFullYear();
+        if (curMYear && years.some(y => String(y) === String(curMYear))) {
+          monthYearSelect.value = curMYear;
+        } else {
+          monthYearSelect.value = now.getFullYear();
+        }
       }
 
       if (yearPicker) {
+        const curY = yearPicker.value;
         yearPicker.innerHTML = years.map(y => `<option value="${y}">${y}</option>`).join('');
-        yearPicker.value = now.getFullYear();
+        if (curY && years.some(y => String(y) === String(curY))) {
+          yearPicker.value = curY;
+        } else {
+          yearPicker.value = now.getFullYear();
+        }
       }
 
-      this.setPeriodType('day');
-      app.hideLoading();
+      this.applyFilters();
     } catch (e) {
-      console.error(e);
-      app.hideLoading();
+      console.error('[ITEM-SALES] loadData error:', e);
     }
-    if (window.lucide) lucide.createIcons();
   },
 
   parseSaleDate(dateStr) {

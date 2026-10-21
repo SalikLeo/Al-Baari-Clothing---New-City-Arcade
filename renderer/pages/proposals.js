@@ -191,12 +191,9 @@ window.Proposals = {
     `;
 
     try {
-      this.sales = await window.api.getProposals() || [];
       const now = new Date();
       const datePicker = document.getElementById('stats-date-picker');
       const monthSelect = document.getElementById('stats-month-select');
-      const monthYearSelect = document.getElementById('stats-month-year-select');
-      const yearPicker = document.getElementById('stats-year-picker');
       
       if (datePicker) {
         datePicker.value = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
@@ -204,7 +201,27 @@ window.Proposals = {
       if (monthSelect) {
         monthSelect.value = now.getMonth() + 1;
       }
-      
+
+      this.renderMethodOptions();
+      await this.loadData();
+      this.setPeriodType('day');
+    } catch (e) {
+      console.error('[PROPOSALS] Render error:', e);
+    }
+    if (window.lucide) lucide.createIcons();
+  },
+
+  async loadData() {
+    try {
+      this.sales = await window.api.getProposals() || [];
+      const tbody = document.getElementById('sales-list-body');
+      if (!tbody) {
+        return;
+      }
+      const now = new Date();
+      const monthYearSelect = document.getElementById('stats-month-year-select');
+      const yearPicker = document.getElementById('stats-year-picker');
+
       const yearSet = new Set([now.getFullYear()]);
       this.sales.forEach(s => {
         if (s.date) {
@@ -215,21 +232,29 @@ window.Proposals = {
       const years = Array.from(yearSet).sort((a, b) => b - a);
 
       if (monthYearSelect) {
+        const curMYear = monthYearSelect.value;
         monthYearSelect.innerHTML = years.map(y => `<option value="${y}">${y}</option>`).join('');
-        monthYearSelect.value = now.getFullYear();
+        if (curMYear && years.some(y => String(y) === String(curMYear))) {
+          monthYearSelect.value = curMYear;
+        } else {
+          monthYearSelect.value = now.getFullYear();
+        }
       }
 
       if (yearPicker) {
+        const curY = yearPicker.value;
         yearPicker.innerHTML = years.map(y => `<option value="${y}">${y}</option>`).join('');
-        yearPicker.value = now.getFullYear();
+        if (curY && years.some(y => String(y) === String(curY))) {
+          yearPicker.value = curY;
+        } else {
+          yearPicker.value = now.getFullYear();
+        }
       }
 
-      this.renderMethodOptions();
-      this.setPeriodType('day');
+      this.applyFilters();
     } catch (e) {
-      console.error(e);
+      console.error('[PROPOSALS] loadData error:', e);
     }
-    if (window.lucide) lucide.createIcons();
   },
 
   parseSaleDate(dateStr) {
@@ -681,6 +706,13 @@ window.Proposals = {
             await window.api.deleteProposal(id);
             this.sales = this.sales.filter(s => s.id !== id);
             this.applyFilters();
+            try {
+              if (window.Dashboard && typeof Dashboard.loadStats === 'function') Dashboard.loadStats();
+              if (window.SalesForm && typeof SalesForm.refreshStockIndicators === 'function') SalesForm.refreshStockIndicators();
+              if (window.ItemSales && typeof ItemSales.loadData === 'function') ItemSales.loadData();
+              if (window.Customers && typeof Customers.loadData === 'function') Customers.loadData();
+              if (window.MasterDB && typeof MasterDB.loadData === 'function') MasterDB.loadData();
+            } catch(e) {}
           }
         });
       }

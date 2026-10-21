@@ -285,10 +285,22 @@ const app = {
       }
     } else {
       // Returning to an already-rendered tab without clearing state!
-      if (page === 'proposal-form' && window.SalesForm && typeof SalesForm.refreshStockIndicators === 'function') {
+      if (page === 'proposals' && window.Proposals && typeof Proposals.loadData === 'function') {
+        Proposals.loadData();
+      } else if (page === 'dashboard' && window.Dashboard && typeof Dashboard.loadStats === 'function') {
+        Dashboard.loadStats();
+      } else if (page === 'customers' && window.Customers && typeof Customers.loadData === 'function') {
+        Customers.loadData();
+      } else if (page === 'item-sales' && window.ItemSales && typeof ItemSales.loadData === 'function') {
+        ItemSales.loadData();
+      } else if (page === 'expenses' && window.Expenses && typeof Expenses.loadData === 'function') {
+        Expenses.loadData();
+      } else if (page === 'companies' && window.Companies && typeof Companies.loadCompanies === 'function') {
+        Companies.loadCompanies();
+      } else if (page === 'proposal-form' && window.SalesForm && typeof SalesForm.refreshStockIndicators === 'function') {
         SalesForm.refreshStockIndicators();
-      } else if (page === 'master-db' && window.MasterDB && typeof MasterDB.selectCategory === 'function') {
-        MasterDB.selectCategory(MasterDB.currentCategory || 'all');
+      } else if (page === 'master-db' && window.MasterDB && typeof MasterDB.loadData === 'function') {
+        MasterDB.loadData();
       }
     }
     

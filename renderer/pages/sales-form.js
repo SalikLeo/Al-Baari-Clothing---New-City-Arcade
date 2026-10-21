@@ -2103,6 +2103,38 @@ window.SalesForm = {
           }
         }
 
+        // Invalidate and refresh cache for Proposals, Dashboard, ItemSales, Customers, MasterDB
+        try {
+          if (window.Proposals) {
+            const searchInput = document.getElementById('prop-search');
+            if (searchInput) {
+              searchInput.value = '';
+              const clearBtn = document.getElementById('prop-search-clear-btn');
+              if (clearBtn) clearBtn.classList.add('hidden');
+            }
+            if (typeof Proposals.resetPeriodToDefault === 'function') {
+              Proposals.resetPeriodToDefault();
+            }
+            if (typeof Proposals.loadData === 'function') {
+              Proposals.loadData();
+            }
+          }
+          if (window.Dashboard && typeof Dashboard.loadStats === 'function') {
+            Dashboard.loadStats();
+          }
+          if (window.ItemSales && typeof ItemSales.loadData === 'function') {
+            ItemSales.loadData();
+          }
+          if (window.Customers && typeof Customers.loadData === 'function') {
+            Customers.loadData();
+          }
+          if (window.MasterDB && typeof MasterDB.loadData === 'function') {
+            MasterDB.loadData();
+          }
+        } catch(refreshErr) {
+          console.warn("Background tab refresh error after sale:", refreshErr);
+        }
+
         app.hideLoading();
         if (shouldPrint) {
           await this.generateReceipt(saleData);
