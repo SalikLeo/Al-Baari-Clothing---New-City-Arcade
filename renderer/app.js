@@ -410,16 +410,21 @@ const app = {
     // If user was editing a sale in proposal-form and now clicks "New Sale" without an edit ID, reset to new sale
     const editingSaleToNewSale = (page === 'proposal-form' && window.SalesForm && SalesForm.editingSaleId && (!args || !args.id));
 
+    const mainEl = document.querySelector('main');
     if (page === 'proposal-form') {
       content.style.overflow = 'hidden';
-      content.style.height = '100vh';
-      content.classList.remove('p-8');
+      content.style.height = '100%';
+      content.style.padding = '0';
+      content.classList.remove('p-5', 'md:p-6', 'p-8');
       content.classList.add('p-0');
+      if (mainEl) mainEl.style.overflow = 'hidden';
     } else {
       content.style.overflow = '';
       content.style.height = '';
+      content.style.padding = '';
       content.classList.remove('p-0');
-      content.classList.add('p-8');
+      content.classList.add('p-5');
+      if (mainEl) mainEl.style.overflow = '';
     }
 
     if (isNew || isBlank || hasSpecificArgs || editingSaleToNewSale) {

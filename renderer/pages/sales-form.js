@@ -64,7 +64,7 @@ window.SalesForm = {
 
     // Disable parent scrolling for this page to keep our custom layout stable
     container.style.overflow = 'hidden';
-    container.style.height = '100vh';
+    container.style.height = '100%';
     
     this.editingSaleId = args?.id || null;
     this.originalTotal = 0;
@@ -192,7 +192,7 @@ window.SalesForm = {
         </div>
 
         <!-- Main Body: Compact Customer & Quick Settings Header + Search Line + High-Speed Table -->
-        <div class="flex-1 flex flex-col px-3.5 py-2 gap-2 min-h-0 overflow-hidden">
+        <div class="flex-1 flex flex-col px-3.5 pt-2 pb-3.5 gap-2 min-h-0 overflow-hidden">
           
           <!-- Top Row: Customer Selection & 11-Digit Phone Number -->
           <div class="bg-white rounded-xl px-3 py-2 shadow-xs border border-slate-200/80 shrink-0">
@@ -364,7 +364,7 @@ window.SalesForm = {
           </div>
 
           <!-- Bottom Bar: Totals, Discounts, Partial/Received Amount & Complete Sale -->
-          <div class="bg-white rounded-xl px-3 py-2 shadow-xs border border-slate-200/80 shrink-0">
+          <div class="bg-white rounded-xl px-3 py-2 shadow-xs border border-slate-200/80 shrink-0 mb-1">
             <div class="flex flex-wrap items-center justify-between gap-2.5">
               
               <!-- Left side: Additional Discount, Adv Tax & Summary Breakdown -->
