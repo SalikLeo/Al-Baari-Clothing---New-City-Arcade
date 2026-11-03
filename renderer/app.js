@@ -56,9 +56,6 @@ const app = {
       if (window.Expenses) {
         Expenses.expenses = [];
       }
-      if (window.RateList) {
-        RateList.items = [];
-      }
       if (window.Dashboard) {
         Dashboard.stats = null;
       }
@@ -436,7 +433,6 @@ const app = {
             case 'item-sales': await (window.ItemSales || ItemSales).render(panel, args); break;
             case 'proposal-form': await (window.SalesForm || SalesForm).render(panel, editingSaleToNewSale ? { reset: true } : args); break;
             case 'master-db': await (window.MasterDB || MasterDB).render(panel); break;
-            case 'rate-list': await (window.RateList || RateList).render(panel, args); break;
             case 'expenses': await (window.Expenses || Expenses).render(panel); break;
             case 'companies': await (window.Companies || Companies).render(panel); break;
             case 'reports': await (window.Reports || Reports).render(panel); break;
@@ -481,8 +477,6 @@ const app = {
           if (typeof SalesForm.refreshCustomers === 'function') SalesForm.refreshCustomers();
         } else if (page === 'master-db' && window.MasterDB && typeof MasterDB.loadData === 'function') {
           MasterDB.loadData();
-        } else if (page === 'rate-list' && window.RateList && typeof RateList.loadData === 'function') {
-          RateList.loadData();
         }
       } catch (err) {
         console.error(`[app.navigate] Error reloading active tab "${page}":`, err);
@@ -523,7 +517,6 @@ const app = {
       'customers': 'Customers',
       'item-sales': 'Item Sales',
       'master-db': 'Stock',
-      'rate-list': 'Rate List',
       'expenses': 'Expenses',
       'reports': 'Reports',
       'companies': 'Purchases',

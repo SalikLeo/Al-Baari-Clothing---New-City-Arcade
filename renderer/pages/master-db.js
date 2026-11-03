@@ -643,7 +643,7 @@ const MasterDB = {
               </div>
               <div>
                 <h3 id="rate-history-title" class="font-black text-base">Rate Changes Log</h3>
-                <p id="rate-history-subtitle" class="text-[11px] text-slate-400 font-medium">Audit trail of stock additions and weighted cost updates</p>
+                <p id="rate-history-subtitle" class="text-[11px] text-slate-400 font-medium">Audit trail of stock additions and purchase cost updates</p>
               </div>
             </div>
             <div class="flex items-center gap-2">

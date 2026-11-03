@@ -3467,7 +3467,7 @@ window.Companies = {
         transactions.unshift(newTxn);
         window.storage.set(txnKey, transactions);
 
-        // 3. Update Stock & Cost Price using Weighted Average Cost
+        // 3. Update Stock & Cost Price as per purchase (new cost price updated directly from purchase)
         for (const update of stockUpdates) {
             await window.api.addProductStock({
                 category: update.slug,
