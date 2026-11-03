@@ -321,7 +321,7 @@ window.SalesForm = {
                 <!-- Invoice Number Field -->
                 <div class="flex items-center gap-1.5 bg-white border border-slate-200 px-1.5 py-0.5 rounded-lg shadow-xs">
                   <span class="text-slate-400 text-[10px] uppercase font-black tracking-wider">INV:</span>
-                  <input type="text" id="sf-sale-number" value="${this.saleNumber}" class="w-16 bg-slate-50 border border-slate-200 text-slate-900 font-black text-xs uppercase tabular-nums focus:outline-none focus:border-amber-500 px-1 py-0.5 rounded-md text-center" title="Invoice Number">
+                  <input type="text" id="sf-sale-number" value="${this.saleNumber}" class="w-24 bg-slate-50 border border-slate-200 text-slate-900 font-black text-xs uppercase tabular-nums focus:outline-none focus:border-amber-500 px-1.5 py-0.5 rounded-md text-center" title="Invoice Number">
                 </div>
 
                 <!-- Payment Method (Cash / Online) -->
