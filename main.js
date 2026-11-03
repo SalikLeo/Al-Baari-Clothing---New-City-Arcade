@@ -22,6 +22,10 @@ function createWindow() {
   mainWindow.maximize();
   mainWindow.loadFile(path.join(__dirname, 'renderer', 'index.html'));
 
+  mainWindow.webContents.on('did-finish-load', () => {
+    mainWindow.webContents.setZoomFactor(0.88);
+  });
+
   mainWindow.webContents.on('console-message', (event, level, message, line, sourceId) => {
     console.log(`[Renderer] ${message} (${sourceId}:${line})`);
   });
@@ -404,7 +408,14 @@ ipcMain.handle('generate-pdf', async (event, filename) => {
                 right: 0
             }
         };
+        const prevZoom = win.webContents.getZoomFactor();
+        if (prevZoom !== 1.0) {
+          win.webContents.setZoomFactor(1.0);
+        }
         const pdfData = await event.sender.printToPDF(pdfOptions);
+        if (prevZoom !== 1.0) {
+          win.webContents.setZoomFactor(prevZoom);
+        }
         fs.writeFileSync(result.filePath, pdfData);
         return { success: true, path: result.filePath };
     } catch (err) {
@@ -453,8 +464,16 @@ ipcMain.handle('print-receipt', async (event, options = {}) => {
       printOptions.copies = Number(options.copies);
     }
 
+    const prevZoom = win.webContents.getZoomFactor();
+    if (prevZoom !== 1.0) {
+      win.webContents.setZoomFactor(1.0);
+    }
+
     return new Promise((resolve) => {
       win.webContents.print(printOptions, (success, failureReason) => {
+        if (prevZoom !== 1.0) {
+          try { win.webContents.setZoomFactor(prevZoom); } catch(e) {}
+        }
         resolve({ success, failureReason });
       });
     });
@@ -501,8 +520,16 @@ ipcMain.handle('print-barcode-stickers', async (event, options = {}) => {
       printOptions.copies = Number(options.copies);
     }
 
+    const prevZoom = win.webContents.getZoomFactor();
+    if (prevZoom !== 1.0) {
+      win.webContents.setZoomFactor(1.0);
+    }
+
     return new Promise((resolve) => {
       win.webContents.print(printOptions, (success, failureReason) => {
+        if (prevZoom !== 1.0) {
+          try { win.webContents.setZoomFactor(prevZoom); } catch(e) {}
+        }
         resolve({ success, failureReason, deviceName: printOptions.deviceName });
       });
     });

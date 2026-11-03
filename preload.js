@@ -1,4 +1,8 @@
-const { contextBridge, ipcRenderer } = require('electron');
+const { contextBridge, ipcRenderer, webFrame } = require('electron');
+
+try {
+  webFrame.setZoomFactor(0.88);
+} catch (e) {}
 
 contextBridge.exposeInMainWorld('api', {
   // Multi-Branch Management
