@@ -2,7 +2,7 @@ const { app, BrowserWindow, ipcMain, dialog } = require('electron');
 const path = require('path');
 const fs = require('fs');
 
-app.setName('ishaq-jadoon-traders');
+app.setName('al-baari-modest-attire');
 const db = require('./database');
 
 let mainWindow;
@@ -24,6 +24,21 @@ function createWindow() {
 
   mainWindow.webContents.on('console-message', (event, level, message, line, sourceId) => {
     console.log(`[Renderer] ${message} (${sourceId}:${line})`);
+  });
+
+  // Intercept F6 and F8 globally before Chromium's native handlers intercept or suppress them
+  mainWindow.webContents.on('before-input-event', (event, input) => {
+    if (input.type === 'keyDown') {
+      const key = (input.key || '').toUpperCase();
+      const code = (input.code || '').toUpperCase();
+      const isF6 = key === 'F6' || code === 'F6';
+      const isF8 = key === 'F8' || code === 'F8';
+
+      if (isF6 || isF8) {
+        event.preventDefault();
+        mainWindow.webContents.send('trigger-price-checker');
+      }
+    }
   });
 
   // Open external links in default browser
@@ -88,6 +103,11 @@ app.on('window-all-closed', function () {
   if (process.platform !== 'darwin') app.quit();
 });
 
+// Multi-Branch IPC
+ipcMain.handle('get-active-branch', () => (db.getCurrentBranch ? db.getCurrentBranch() : 'b1'));
+ipcMain.handle('switch-branch', (event, branchId) => (db.switchBranch ? db.switchBranch(branchId) : { success: true }));
+ipcMain.handle('copy-catalog-from-branch', (event, fromBranch, toBranch) => (db.copyCatalogFromBranch ? db.copyCatalogFromBranch(fromBranch, toBranch) : { success: false }));
+
 // Settings IPC
 ipcMain.handle('get-settings', () => db.getSettings());
 ipcMain.handle('save-settings', (event, data) => db.saveSettings(data));
@@ -99,6 +119,7 @@ ipcMain.handle('update-product', (event, category, id, data) => db.updateProduct
 ipcMain.handle('change-product-category', (event, oldCategory, newCategory, id, data) => db.changeProductCategory(oldCategory, newCategory, id, data));
 ipcMain.handle('delete-product', (event, category, id) => db.deleteProduct(category, id));
 ipcMain.handle('find-product-by-name', (event, name, excludeCategory, excludeId) => db.findProductByName(name, excludeCategory, excludeId));
+ipcMain.handle('find-product-by-barcode', (event, barcode, excludeCategory, excludeId) => db.findProductByBarcode(barcode, excludeCategory, excludeId));
 ipcMain.handle('get-category-labels', () => db.getCategoryLabels());
 ipcMain.handle('get-category-stats', () => db.getCategoryStats());
 ipcMain.handle('update-category-label', (event, slug, label) => db.updateCategoryLabel(slug, label));
@@ -182,7 +203,7 @@ function pruneOldBackups(dir, keepCount = 50) {
   try {
     if (!fs.existsSync(dir)) return;
     const files = fs.readdirSync(dir)
-      .filter(f => f.startsWith('IshaqJadoonTraders-AutoBackup-') && f.endsWith('.db'))
+      .filter(f => (f.startsWith('AlBaariModestAttire_') || f.startsWith('AlBaariModestAttire-') || f.startsWith('IshaqJadoonTraders_') || f.startsWith('IshaqJadoonTraders-')) && f.endsWith('.db'))
       .map(f => {
         const fullPath = path.join(dir, f);
         return { name: f, fullPath, mtime: fs.statSync(fullPath).mtimeMs };
@@ -203,11 +224,15 @@ async function performAutoBackup() {
   try {
     const settings = db.getSettings();
     let targetDir = settings.auto_backup_dir;
-    const defaultDir = path.join(app.getPath('documents'), 'Ishaq Jadoon Traders Backups');
+    const defaultDir = path.join(app.getPath('documents'), 'Al-Baari Modest Attire Backups');
 
-    if (!targetDir || !fs.existsSync(targetDir)) {
+    if (!targetDir || !fs.existsSync(targetDir) || targetDir.includes('Ishaq Jadoon Traders Backups')) {
       try {
-        if (targetDir) fs.mkdirSync(targetDir, { recursive: true });
+        if (targetDir && !targetDir.includes('Ishaq Jadoon Traders Backups')) {
+          fs.mkdirSync(targetDir, { recursive: true });
+        } else {
+          targetDir = defaultDir;
+        }
       } catch (e) {
         targetDir = defaultDir;
       }
@@ -220,7 +245,8 @@ async function performAutoBackup() {
     const now = new Date();
     const pad = (n) => String(n).padStart(2, '0');
     const datetimeStr = `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}_${pad(now.getHours())}-${pad(now.getMinutes())}-${pad(now.getSeconds())}`;
-    const fileName = `IshaqJadoonTraders-AutoBackup-${datetimeStr}.db`;
+    const branchTag = (db.getCurrentBranch ? db.getCurrentBranch().toUpperCase() : 'B1');
+    const fileName = `AlBaariModestAttire_${branchTag}-AutoBackup-${datetimeStr}.db`;
     const destPath = path.join(targetDir, fileName);
 
     console.log(`[AutoBackup] Backing up database to: ${destPath}`);
@@ -238,17 +264,17 @@ async function performAutoBackup() {
 
 ipcMain.handle('get-backup-directory', () => {
   const settings = db.getSettings();
-  if (settings.auto_backup_dir && fs.existsSync(settings.auto_backup_dir)) {
+  if (settings.auto_backup_dir && fs.existsSync(settings.auto_backup_dir) && !settings.auto_backup_dir.includes('Ishaq Jadoon Traders Backups')) {
     return settings.auto_backup_dir;
   }
-  return path.join(app.getPath('documents'), 'Ishaq Jadoon Traders Backups');
+  return path.join(app.getPath('documents'), 'Al-Baari Modest Attire Backups');
 });
 
 ipcMain.handle('select-backup-directory', async () => {
   const settings = db.getSettings();
-  const defaultDir = (settings.auto_backup_dir && fs.existsSync(settings.auto_backup_dir))
+  const defaultDir = (settings.auto_backup_dir && fs.existsSync(settings.auto_backup_dir) && !settings.auto_backup_dir.includes('Ishaq Jadoon Traders Backups'))
     ? settings.auto_backup_dir
-    : path.join(app.getPath('documents'), 'Ishaq Jadoon Traders Backups');
+    : path.join(app.getPath('documents'), 'Al-Baari Modest Attire Backups');
   if (!fs.existsSync(defaultDir)) {
     try { fs.mkdirSync(defaultDir, { recursive: true }); } catch (e) {}
   }
@@ -270,8 +296,8 @@ ipcMain.handle('select-backup-directory', async () => {
 ipcMain.handle('open-backup-directory', async () => {
   const settings = db.getSettings();
   let dir = settings.auto_backup_dir;
-  if (!dir || !fs.existsSync(dir)) {
-    dir = path.join(app.getPath('documents'), 'Ishaq Jadoon Traders Backups');
+  if (!dir || !fs.existsSync(dir) || dir.includes('Ishaq Jadoon Traders Backups')) {
+    dir = path.join(app.getPath('documents'), 'Al-Baari Modest Attire Backups');
   }
   if (!fs.existsSync(dir)) {
     try { fs.mkdirSync(dir, { recursive: true }); } catch (e) {}
@@ -287,9 +313,10 @@ ipcMain.handle('backup-data', async () => {
   const pad = (n) => String(n).padStart(2, '0');
   const datetimeStr = `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}_${pad(now.getHours())}-${pad(now.getMinutes())}-${pad(now.getSeconds())}`;
   
+  const branchTag = (db.getCurrentBranch ? db.getCurrentBranch().toUpperCase() : 'B1');
   const result = await dialog.showSaveDialog(mainWindow, {
     title: 'Backup Database',
-    defaultPath: `IshaqJadoonTraders-${datetimeStr}.db`,
+    defaultPath: `AlBaariModestAttire_${branchTag}-${datetimeStr}.db`,
     filters: [{ name: 'SQLite Database', extensions: ['db'] }]
   });
 
@@ -401,11 +428,11 @@ ipcMain.handle('print-receipt', async (event, options = {}) => {
 
   try {
     const printers = await win.webContents.getPrintersAsync();
-    const posPrinter = printers.find(p => /pos|receipt|thermal|xp-|80|58|xprinter|printer/i.test(p.name));
+    const posPrinter = printers.find(p => /pos|receipt|thermal|xp-|80|58|xprinter|speed|sp-|650|label|sticker|barcode|printer/i.test(p.name));
     const targetPrinter = options.deviceName || (posPrinter ? posPrinter.name : undefined);
 
     const printOptions = {
-      silent: options.silent || false,
+      silent: options.silent !== undefined ? options.silent : false,
       printBackground: true,
       margins: {
         marginType: 'none',
@@ -419,6 +446,12 @@ ipcMain.handle('print-receipt', async (event, options = {}) => {
     if (targetPrinter) {
       printOptions.deviceName = targetPrinter;
     }
+    if (options.pageSize) {
+      printOptions.pageSize = options.pageSize;
+    }
+    if (options.copies && Number(options.copies) > 1) {
+      printOptions.copies = Number(options.copies);
+    }
 
     return new Promise((resolve) => {
       win.webContents.print(printOptions, (success, failureReason) => {
@@ -427,6 +460,54 @@ ipcMain.handle('print-receipt', async (event, options = {}) => {
     });
   } catch (err) {
     console.error('print-receipt error:', err);
+    return { success: false, error: err.message };
+  }
+});
+
+ipcMain.handle('print-barcode-stickers', async (event, options = {}) => {
+  const win = BrowserWindow.fromWebContents(event.sender);
+  if (!win) return { success: false, error: 'No active window' };
+
+  try {
+    const printers = await win.webContents.getPrintersAsync();
+    // Prioritize 4BARCODE 3B-365B / sticker printer first, avoid POS80 receipt printer
+    const labelPrinter = options.deviceName || 
+      (printers.find(p => /4barcode|3b-365/i.test(p.name))?.name) ||
+      (printers.find(p => /label|sticker|speed|sp-|650/i.test(p.name))?.name) ||
+      (printers.find(p => /barcode/i.test(p.name))?.name) ||
+      (printers.find(p => /pos|receipt|thermal|xp-|80|58|xprinter/i.test(p.name))?.name);
+
+    const printOptions = {
+      silent: options.silent !== undefined ? options.silent : false,
+      printBackground: true,
+      margins: {
+        marginType: 'none',
+        top: 0,
+        bottom: 0,
+        left: 0,
+        right: 0
+      }
+    };
+
+    if (labelPrinter) {
+      printOptions.deviceName = labelPrinter;
+    }
+
+    if (options.pageSize) {
+      printOptions.pageSize = options.pageSize;
+    }
+
+    if (options.copies && Number(options.copies) > 1) {
+      printOptions.copies = Number(options.copies);
+    }
+
+    return new Promise((resolve) => {
+      win.webContents.print(printOptions, (success, failureReason) => {
+        resolve({ success, failureReason, deviceName: printOptions.deviceName });
+      });
+    });
+  } catch (err) {
+    console.error('print-barcode-stickers error:', err);
     return { success: false, error: err.message };
   }
 });

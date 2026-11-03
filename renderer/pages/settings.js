@@ -77,7 +77,7 @@ const Settings = {
                 </div>
                 <div>
                   <label class="block text-xs font-bold text-slate-400 uppercase mb-1">Company Address</label>
-                  <textarea id="set-address" rows="2" disabled class="w-full bg-slate-50 border border-slate-200 rounded-lg p-2 text-sm opacity-70 cursor-not-allowed outline-none" placeholder="Near CB Plaza, Barrier 3, Main GT Road, Wah Cantt"></textarea>
+                  <textarea id="set-address" rows="2" disabled class="w-full bg-slate-50 border border-slate-200 rounded-lg p-2 text-sm opacity-70 cursor-not-allowed outline-none" placeholder="Wah Cantt"></textarea>
                 </div>
               </div>
             </form>
@@ -227,14 +227,105 @@ const Settings = {
     }
   },
 
+
+  async refreshPrinters() {
+    const select = document.getElementById('set-label-printer');
+    if (!select) return;
+
+    select.innerHTML = '<option value="">Detecting printers...</option>';
+    let printers = [];
+    try {
+      if (window.api && window.api.getPrinters) {
+        printers = await window.api.getPrinters() || [];
+      }
+    } catch (e) {
+      console.warn('Failed to get printers:', e);
+    }
+
+    if (!printers || printers.length === 0) {
+      select.innerHTML = '<option value="">Default Windows Printer (Auto)</option>';
+      return;
+    }
+
+    const savedPrinter = window.storage ? window.storage.get('label_printer_name') || '' : '';
+
+    printers.sort((a, b) => {
+      const isPosA = /pos|speed|label|sticker|barcode|thermal|xp-|80/i.test(a.name);
+      const isPosB = /pos|speed|label|sticker|barcode|thermal|xp-|80/i.test(b.name);
+      if (isPosA && !isPosB) return -1;
+      if (!isPosA && isPosB) return 1;
+      return a.name.localeCompare(b.name);
+    });
+
+    select.innerHTML = printers.map(p => {
+      const isSpeedOrPos = /pos|speed|label|sticker|barcode|thermal|xp-|80/i.test(p.name);
+      const label = p.name + (isSpeedOrPos ? ' ★ (Speed-X / Thermal Ready)' : '') + (p.isDefault ? ' [Default]' : '');
+      return '<option value="' + p.name + '">' + label + '</option>';
+    }).join('');
+
+    if (savedPrinter && printers.some(p => p.name === savedPrinter)) {
+      select.value = savedPrinter;
+    } else {
+      const best = printers.find(p => /speed|sp-|650|label|sticker|barcode/i.test(p.name)) ||
+                   printers.find(p => /pos|thermal|xp-|80/i.test(p.name)) ||
+                   printers.find(p => p.isDefault) || printers[0];
+      if (best) select.value = best.name;
+    }
+  },
+
+  savePrinterSettings() {
+    if (!window.storage) return;
+    const printer = document.getElementById('set-label-printer')?.value || '';
+    const size = document.getElementById('set-label-size')?.value || '38x28';
+    const mode = document.getElementById('set-print-mode')?.value || 'silent';
+    const store = (document.getElementById('set-sticker-store-name')?.value || '').trim();
+
+    window.storage.set('label_printer_name', printer);
+    window.storage.set('label_sticker_size', size);
+    window.storage.set('label_print_mode', mode);
+    if (store) window.storage.set('label_store_name', store);
+
+    if (window.app && app.barcodeStickerState) {
+      app.barcodeStickerState.selectedPrinter = printer;
+      app.barcodeStickerState.sizePreset = size;
+      if (store) app.barcodeStickerState.storeName = store;
+    }
+  },
+
+  testStickerPrint() {
+    this.savePrinterSettings();
+    if (window.app && typeof app.openBarcodeStickerModal === 'function') {
+      app.openBarcodeStickerModal();
+      setTimeout(() => {
+        if (typeof app.testPrintBarcodeSticker === 'function') {
+          app.testPrintBarcodeSticker();
+        }
+      }, 300);
+    }
+  },
+
   async reloadSettings() {
     const s = await window.api.getSettings();
-    if (document.getElementById('set-name')) document.getElementById('set-name').value = s.company_name || 'Ishaq Jadoon Traders';
+    if (document.getElementById('set-name')) document.getElementById('set-name').value = s.company_name || 'Al-Baari Modest Attire';
     if (document.getElementById('set-web')) document.getElementById('set-web').value = s.website || '';
-    if (document.getElementById('set-address')) document.getElementById('set-address').value = s.address || 'Near CB Plaza, Barrier 3, Main GT Road, Wah Cantt';
-    if (document.getElementById('set-phone')) document.getElementById('set-phone').value = s.phone || 'M.Ishaq 0301-2630481, Ch. Shakir 0300-5074410';
+    if (document.getElementById('set-address')) document.getElementById('set-address').value = s.address || 'Wah Cantt';
+    if (document.getElementById('set-phone')) document.getElementById('set-phone').value = s.phone || '0335-0059819';
     this.originalLogo = s.logo_path || '';
     this.updateLogoPreview(this.originalLogo);
+
+    // Populate Barcode Sticker Printer settings
+    await this.refreshPrinters();
+    const savedSize = window.storage ? window.storage.get('label_sticker_size') || '38x28' : '38x28';
+    const savedMode = window.storage ? window.storage.get('label_print_mode') || 'silent' : 'silent';
+    const savedStore = window.storage ? window.storage.get('label_store_name') : null;
+    const sizeSelect = document.getElementById('set-label-size');
+    const modeSelect = document.getElementById('set-print-mode');
+    const storeInput = document.getElementById('set-sticker-store-name');
+
+    if (sizeSelect) sizeSelect.value = savedSize;
+    if (modeSelect) modeSelect.value = savedMode;
+    if (storeInput) storeInput.value = savedStore !== null ? savedStore : (s.company_name || 'AL-BAARI MODEST ATTIRE');
+
 
     const stockPassword = window.storage.get('stock_password') || '';
     const passInput = document.getElementById('set-stock-password');
@@ -354,10 +445,10 @@ const Settings = {
     try {
       const currentSettings = (await window.api.getSettings()) || {};
       const data = {
-        company_name: document.getElementById('set-name')?.value || currentSettings.company_name || 'Ishaq Jadoon Traders',
+        company_name: document.getElementById('set-name')?.value || currentSettings.company_name || 'Al-Baari Modest Attire',
         website: document.getElementById('set-web')?.value || '',
-        address: document.getElementById('set-address')?.value || currentSettings.address || 'Near CB Plaza, Barrier 3, Main GT Road, Wah Cantt',
-        phone: document.getElementById('set-phone')?.value || currentSettings.phone || '03095369472, 03299934620',
+        address: document.getElementById('set-address')?.value || currentSettings.address || 'Wah Cantt',
+        phone: document.getElementById('set-phone')?.value || currentSettings.phone || '0335-0059819',
         logo_path: document.getElementById('set-logo-path')?.value || '',
         qr_path: '',
         qr_text: ''

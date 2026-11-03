@@ -8,8 +8,9 @@
     margin: 0 !important;
     padding: 0 !important;
     background: #ffffff !important;
-    width: 80mm !important;
-    max-width: 80mm !important;
+    background-color: #ffffff !important;
+    color: #000000 !important;
+    width: auto !important;
     height: auto !important;
     min-height: 0 !important;
     overflow: visible !important;
@@ -18,22 +19,30 @@
     print-color-adjust: exact !important;
   }
 
-  /* Hide everything except print containers */
+  /* Hide all UI elements, sidebars, headers, modals, toasts, overlays */
+  .no-print,
+  #app-toast-container,
+  #barcode-sticker-modal,
+  #price-checker-modal,
+  #confirm-modal, 
+  #payment-modal, 
+  #preview-modal, 
+  #loading-overlay,
+  #quick-calculator-widget,
   body > aside, 
-  body > main, 
-  body > #confirm-modal, 
-  body > #payment-modal, 
-  body > #preview-modal, 
-  body > #loading-overlay,
-  body > #quick-calculator-widget {
+  body > main,
+  body > div:not(.active-print-target) {
     display: none !important;
+    visibility: hidden !important;
+    opacity: 0 !important;
   }
 
   /* Default: hide all print containers */
   #receipt-print, 
   #db-print-container, 
   #voucher-print, 
-  #report-print-container {
+  #report-print-container,
+  #barcode-sticker-print {
     display: none !important;
   }
 
@@ -48,6 +57,31 @@
     max-width: 80mm !important;
     margin: 0 auto !important;
     padding: 0 !important;
+  }
+
+  /* Barcode sticker print target: width and height controlled dynamically or via inline styles */
+  #barcode-sticker-print.active-print-target:not(:empty) {
+    display: block !important;
+    position: relative !important;
+    margin: 0 auto !important;
+    padding: 0 !important;
+    background: #ffffff !important;
+  }
+
+  .barcode-sticker-item {
+    page-break-after: always !important;
+    break-after: page !important;
+    box-sizing: border-box !important;
+    background: #ffffff !important;
+    color: #000000 !important;
+    overflow: hidden !important;
+    margin: 0 auto !important;
+    padding: 0 !important;
+  }
+
+  .barcode-sticker-item:last-child {
+    page-break-after: avoid !important;
+    break-after: avoid !important;
   }
 
   /* 80mm Thermal Paper Print layout & container overrides */

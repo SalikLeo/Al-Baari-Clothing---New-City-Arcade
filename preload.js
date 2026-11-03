@@ -1,6 +1,11 @@
 const { contextBridge, ipcRenderer } = require('electron');
 
 contextBridge.exposeInMainWorld('api', {
+  // Multi-Branch Management
+  getActiveBranch: () => ipcRenderer.invoke('get-active-branch'),
+  switchBranch: (branchId) => ipcRenderer.invoke('switch-branch', branchId),
+  copyCatalogFromBranch: (fromBranch, toBranch) => ipcRenderer.invoke('copy-catalog-from-branch', fromBranch, toBranch),
+
   // Settings
   getSettings: () => ipcRenderer.invoke('get-settings'),
   saveSettings: (data) => ipcRenderer.invoke('save-settings', data),
@@ -13,6 +18,7 @@ contextBridge.exposeInMainWorld('api', {
   changeProductCategory: (oldCategory, newCategory, id, data) => ipcRenderer.invoke('change-product-category', oldCategory, newCategory, id, data),
   deleteProduct: (category, id) => ipcRenderer.invoke('delete-product', category, id),
   findProductByName: (name, excludeCategory, excludeId) => ipcRenderer.invoke('find-product-by-name', name, excludeCategory, excludeId),
+  findProductByBarcode: (barcode, excludeCategory, excludeId) => ipcRenderer.invoke('find-product-by-barcode', barcode, excludeCategory, excludeId),
   getCategoryLabels: () => ipcRenderer.invoke('get-category-labels'),
   getCategoryStats: () => ipcRenderer.invoke('get-category-stats'),
   updateCategoryLabel: (slug, label) => ipcRenderer.invoke('update-category-label', slug, label),
@@ -95,5 +101,11 @@ contextBridge.exposeInMainWorld('api', {
 
   // Thermal Printing
   printReceipt: (options) => ipcRenderer.invoke('print-receipt', options),
+  printBarcodeStickers: (options) => ipcRenderer.invoke('print-barcode-stickers', options),
   getPrinters: () => ipcRenderer.invoke('get-printers'),
+
+  // Global Shortcuts Event
+  onTriggerPriceChecker: (callback) => {
+    ipcRenderer.on('trigger-price-checker', () => callback());
+  },
 });

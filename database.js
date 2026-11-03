@@ -4,29 +4,154 @@ const fs = require('fs');
 const { app } = require('electron');
 
 let db;
+let currentBranch = 'b1';
+const branchDbs = {};
 
-function init(customPath = null) {
-  let dbPath;
-  if (customPath) {
-    dbPath = customPath;
-  } else if (app && typeof app.getPath === 'function') {
-    dbPath = path.join(app.getPath('userData'), 'ishaq_jadoon.db');
+function getDbPathForBranch(branchId = 'b1') {
+  const filename = branchId === 'b2' ? 'al_baari_b2.db' : 'al_baari.db';
+  const legacyFilename = branchId === 'b2' ? 'ishaq_jadoon_b2.db' : 'ishaq_jadoon.db';
+
+  let dir;
+  if (app && typeof app.getPath === 'function') {
+    dir = app.getPath('userData');
   } else {
-    const fs = require('fs');
     const appData = process.env.APPDATA || (process.platform === 'darwin' ? path.join(process.env.HOME, 'Library/Application Support') : path.join(process.env.HOME, '.config'));
-    const dir = path.join(appData, 'ishaq-jadoon-traders');
-    if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
-    dbPath = path.join(dir, 'ishaq_jadoon.db');
+    dir = path.join(appData, 'al-baari-modest-attire');
+  }
+  if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
+
+  const targetPath = path.join(dir, filename);
+
+  // Auto-migrate from legacy database if target doesn't exist yet
+  if (!fs.existsSync(targetPath)) {
+    const legacyPathSameDir = path.join(dir, legacyFilename);
+    const appData = process.env.APPDATA || (process.platform === 'darwin' ? path.join(process.env.HOME, 'Library/Application Support') : path.join(process.env.HOME, '.config'));
+    const legacyDir = path.join(appData, 'ishaq-jadoon-traders');
+    const legacyPathOldDir = path.join(legacyDir, legacyFilename);
+
+    if (fs.existsSync(legacyPathSameDir)) {
+      try { fs.copyFileSync(legacyPathSameDir, targetPath); } catch (e) {}
+    } else if (fs.existsSync(legacyPathOldDir)) {
+      try { fs.copyFileSync(legacyPathOldDir, targetPath); } catch (e) {}
+    }
   }
 
-  db = new Database(dbPath);
-  db.pragma('journal_mode = WAL');
-  db.pragma('synchronous = NORMAL');
-  db.pragma('temp_store = MEMORY');
-  db.pragma('cache_size = -64000');
+  return targetPath;
+}
+
+function initBranch(branchId = 'b1') {
+  if (branchDbs[branchId]) {
+    return branchDbs[branchId];
+  }
+  const dbPath = getDbPathForBranch(branchId);
+  const instance = new Database(dbPath);
+  instance.pragma('journal_mode = WAL');
+  instance.pragma('synchronous = NORMAL');
+  instance.pragma('temp_store = MEMORY');
+  instance.pragma('cache_size = -64000');
   
+  branchDbs[branchId] = instance;
+  
+  const prevDb = db;
+  db = instance;
   createTables();
-  seedInitialData();
+  seedInitialData(branchId);
+  db = prevDb || instance;
+  
+  return instance;
+}
+
+function init(customPath = null) {
+  if (customPath) {
+    db = new Database(customPath);
+    db.pragma('journal_mode = WAL');
+    db.pragma('synchronous = NORMAL');
+    db.pragma('temp_store = MEMORY');
+    db.pragma('cache_size = -64000');
+    branchDbs['b1'] = db;
+    currentBranch = 'b1';
+    createTables();
+    seedInitialData('b1');
+    return;
+  }
+
+  currentBranch = 'b1';
+  db = initBranch('b1');
+}
+
+function switchBranch(branchId = 'b1') {
+  if (branchId !== 'b1' && branchId !== 'b2') branchId = 'b1';
+  currentBranch = branchId;
+  db = initBranch(branchId);
+  return { success: true, branch: currentBranch, dbPath: getDbPathForBranch(currentBranch) };
+}
+
+function getCurrentBranch() {
+  return currentBranch;
+}
+
+function copyCatalogFromBranch(fromBranch = 'b1', toBranch = 'b2') {
+  const sourceDb = initBranch(fromBranch);
+  const targetDb = initBranch(toBranch);
+  
+  let totalCopied = 0;
+  
+  const tx = targetDb.transaction(() => {
+    // 1. Copy category labels
+    const sourceCatLabels = sourceDb.prepare('SELECT slug, label FROM category_labels').all();
+    const insertCatStmt = targetDb.prepare('INSERT OR IGNORE INTO category_labels (slug, label) VALUES (?, ?)');
+    sourceCatLabels.forEach(c => insertCatStmt.run(c.slug, c.label));
+    
+    // 2. Copy units
+    const sourceUnits = sourceDb.prepare('SELECT name FROM product_units').all();
+    const insertUnitStmt = targetDb.prepare('INSERT OR IGNORE INTO product_units (name) VALUES (?)');
+    sourceUnits.forEach(u => insertUnitStmt.run(u.name));
+    
+    // 3. Copy products for all categories
+    sourceCatLabels.forEach(cat => {
+      try {
+        const sourceProducts = sourceDb.prepare(`SELECT * FROM products_${cat.slug}`).all();
+        if (!sourceProducts || sourceProducts.length === 0) return;
+        
+        const insertStmt = targetDb.prepare(`
+          INSERT INTO products_${cat.slug} (
+            item_name, description, current_stock, unit, cost_price, retail_price, 
+            wholesale_cost_price, wholesale_price, company_id, barcode
+          ) VALUES (?, ?, 0, ?, ?, ?, ?, ?, ?, ?)
+        `);
+        
+        const existingNames = new Set(targetDb.prepare(`SELECT LOWER(TRIM(COALESCE(item_name, ''))) as n FROM products_${cat.slug}`).all().map(r => r.n));
+        const existingBarcodes = new Set(targetDb.prepare(`SELECT LOWER(TRIM(COALESCE(barcode, ''))) as b FROM products_${cat.slug} WHERE barcode IS NOT NULL`).all().map(r => r.b));
+        
+        sourceProducts.forEach(p => {
+          const nameClean = (p.item_name || '').trim().toLowerCase();
+          const bcClean = (p.barcode || '').trim().toLowerCase();
+          if (nameClean && existingNames.has(nameClean)) return;
+          if (bcClean && existingBarcodes.has(bcClean)) return;
+          
+          insertStmt.run(
+            p.item_name,
+            p.description || '',
+            p.unit || 'pcs',
+            p.cost_price || 0,
+            p.retail_price || 0,
+            p.wholesale_cost_price || 0,
+            p.wholesale_price || 0,
+            p.company_id || null,
+            p.barcode || null
+          );
+          if (nameClean) existingNames.add(nameClean);
+          if (bcClean) existingBarcodes.add(bcClean);
+          totalCopied++;
+        });
+      } catch (err) {
+        console.warn(`Error copying category ${cat.slug}:`, err);
+      }
+    });
+  });
+  
+  tx();
+  return { success: true, count: totalCopied };
 }
 
 function createTables() {
@@ -127,6 +252,21 @@ function createTables() {
           db.exec(`ALTER TABLE ${tableName} ADD COLUMN pieces_per_carton INTEGER DEFAULT NULL`);
         } catch(e) {}
     }
+    if (!columns.includes('barcode')) {
+        try { 
+          db.exec(`ALTER TABLE ${tableName} ADD COLUMN barcode TEXT`);
+        } catch(e) {}
+    }
+    try {
+      db.exec(`CREATE INDEX IF NOT EXISTS idx_${tableName}_barcode ON ${tableName}(barcode)`);
+    } catch(e) {}
+  });
+
+  // Ensure stock floats are clean (never more than 2 decimals)
+  productTables.forEach(row => {
+    try {
+      db.exec(`UPDATE ${row.name} SET current_stock = ROUND(current_stock, 2) WHERE current_stock IS NOT NULL`);
+    } catch(e) {}
   });
 
   // Performance Indexes
@@ -362,19 +502,42 @@ function createTables() {
   } catch(e) {}
 }
 
-function seedInitialData() {
+function seedInitialData(branchId = 'b1') {
   try {
+    const isB2 = branchId === 'b2';
+    const defaultCompanyName = 'Al-Baari Modest Attire';
+
     // Ensure default company settings
     const existingCompany = db.prepare("SELECT value FROM settings WHERE key = 'company_name'").get();
-    if (!existingCompany || !existingCompany.value || existingCompany.value === 'Ultimate Marketing' || existingCompany.value.toLowerCase().includes('baba') || existingCompany.value.toLowerCase().includes('waziristan')) {
-      db.prepare("INSERT OR REPLACE INTO settings (key, value) VALUES ('company_name', ?)").run('Ishaq Jadoon Traders');
+    if (!existingCompany || !existingCompany.value || 
+        existingCompany.value === 'Ultimate Marketing' || 
+        existingCompany.value.toLowerCase().includes('baba') || 
+        existingCompany.value.toLowerCase().includes('waziristan') || 
+        existingCompany.value.toLowerCase().includes('ishaq') || 
+        existingCompany.value.toLowerCase().includes('ice cream') || 
+        /\(Branch \d+\)/i.test(existingCompany.value)) {
+      db.prepare("INSERT OR REPLACE INTO settings (key, value) VALUES ('company_name', ?)").run(defaultCompanyName);
     }
-    db.prepare("INSERT OR REPLACE INTO settings (key, value) VALUES ('address', ?)").run('Near CB Plaza, Barrier 3, Main GT Road, Wah Cantt');
+    db.prepare("INSERT OR REPLACE INTO settings (key, value) VALUES ('branch_id', ?)").run(branchId);
+    db.prepare("INSERT OR REPLACE INTO settings (key, value) VALUES ('branch_name', ?)").run(isB2 ? 'Branch 2' : 'Branch 1');
+
+    // Check address
+    const existingAddress = db.prepare("SELECT value FROM settings WHERE key = 'address'").get();
+    if (!existingAddress || !existingAddress.value || existingAddress.value.includes('CB Plaza') || existingAddress.value.includes('Barrier 3')) {
+      db.prepare("INSERT OR REPLACE INTO settings (key, value) VALUES ('address', ?)").run('Wah Cantt');
+    }
     
     // Check phone
     const existingPhone = db.prepare("SELECT value FROM settings WHERE key = 'phone'").get();
-    if (!existingPhone || !existingPhone.value || existingPhone.value.includes('0312') || existingPhone.value.includes('Kaleem') || existingPhone.value.includes('03095369472')) {
-      db.prepare("INSERT OR REPLACE INTO settings (key, value) VALUES ('phone', ?)").run('M.Ishaq 0301-2630481, Ch. Shakir 0300-5074410');
+    if (!existingPhone || !existingPhone.value || 
+        existingPhone.value.includes('0301') || 
+        existingPhone.value.includes('0300') || 
+        existingPhone.value.includes('0312') || 
+        existingPhone.value.includes('Kaleem') || 
+        existingPhone.value.includes('Ishaq') || 
+        existingPhone.value.includes('Shakir') || 
+        existingPhone.value.includes('03095369472')) {
+      db.prepare("INSERT OR REPLACE INTO settings (key, value) VALUES ('phone', ?)").run('0335-0059819');
     }
 
     // Clean up stale logo if it belongs to Baba Waziristan or temporary downloads
@@ -388,14 +551,20 @@ function seedInitialData() {
       db.prepare("INSERT OR REPLACE INTO settings (key, value) VALUES ('logo_path', ?)").run('');
     }
 
-    db.prepare("INSERT OR IGNORE INTO settings (key, value) VALUES ('tagline', ?)").run('Wholesale & Retail General Merchants');
+    const defaultTagline = 'Returns & exchange accepted within 2 days.\nItems must be unworn with original tags attached.';
+    const existingTagline = db.prepare("SELECT value FROM settings WHERE key = 'tagline'").get();
+    if (!existingTagline || !existingTagline.value || existingTagline.value.includes('Wholesale') || existingTagline.value.includes('General Merchants')) {
+      db.prepare("INSERT OR REPLACE INTO settings (key, value) VALUES ('tagline', ?)").run(defaultTagline);
+    } else {
+      db.prepare("INSERT OR IGNORE INTO settings (key, value) VALUES ('tagline', ?)").run(defaultTagline);
+    }
 
     // Default auto backup directory in Documents
     const defaultBackupDir = (app && typeof app.getPath === 'function') 
-      ? path.join(app.getPath('documents'), 'Ishaq Jadoon Traders Backups')
-      : path.join(require('os').homedir(), 'Documents', 'Ishaq Jadoon Traders Backups');
+      ? path.join(app.getPath('documents'), 'Al-Baari Modest Attire Backups')
+      : path.join(require('os').homedir(), 'Documents', 'Al-Baari Modest Attire Backups');
     const existingBackupDir = db.prepare("SELECT value FROM settings WHERE key = 'auto_backup_dir'").get();
-    if (!existingBackupDir || !existingBackupDir.value) {
+    if (!existingBackupDir || !existingBackupDir.value || existingBackupDir.value.includes('Ishaq Jadoon Traders Backups') || existingBackupDir.value.includes('jadoon')) {
       db.prepare("INSERT OR REPLACE INTO settings (key, value) VALUES ('auto_backup_dir', ?)").run(defaultBackupDir);
     }
     try {
@@ -421,15 +590,28 @@ function seedInitialData() {
       { slug: 'others', label: 'General Items' }
     ];
     
-    // Always upsert the 8 standard categories
+    // Always upsert the 8 standard categories and wipe out any legacy solar labels
     productLabels.forEach(l => {
       const existing = db.prepare('SELECT id, label FROM category_labels WHERE slug = ?').get(l.slug);
       if (!existing) {
         db.prepare('INSERT INTO category_labels (slug, label) VALUES (?, ?)').run(l.slug, l.label);
-      } else if (existing.label === 'Panels' || existing.label === 'Solar Panels' || existing.label === 'Inverters' || existing.label === 'Structures' || existing.label === 'Cables' || existing.label === 'Breakers' || existing.label === 'Batteries' || existing.label === 'Accessories') {
-        db.prepare('UPDATE category_labels SET label = ? WHERE slug = ?').run(l.label, l.slug);
+      } else {
+        const lowerLabel = String(existing.label || '').toLowerCase().trim();
+        const solarKeywords = ['panels', 'solar panels', 'inverters', 'solar inverters', 'structures', 'cables', 'breakers', 'batteries', 'accessories', 'solar', ''];
+        if (solarKeywords.includes(lowerLabel)) {
+          db.prepare('UPDATE category_labels SET label = ? WHERE slug = ?').run(l.label, l.slug);
+        }
       }
     });
+
+    // Delete any stray/orphan categories created with solar names
+    try {
+      db.prepare(`
+        DELETE FROM category_labels 
+        WHERE LOWER(label) IN ('panels', 'solar panels', 'inverters', 'solar inverters', 'structures', 'cables', 'breakers', 'batteries', 'accessories', 'solar')
+          AND slug NOT IN ('panels', 'inverters', 'structures', 'cables', 'breakers', 'batteries', 'misc', 'others')
+      `).run();
+    } catch(e) {}
 
     // Default units
     db.exec(`DELETE FROM product_units WHERE name IN ('FEET', 'RUNNING FEET', 'METER', 'COTTON')`);
@@ -586,7 +768,7 @@ function saveAllKv(entries) {
 }
 
 function getProducts(category, companyId = null) {
-  if (category === 'all') {
+  if (!category || category === 'all') {
     return searchAllProducts('', companyId);
   }
   let sql = `
@@ -604,7 +786,12 @@ function getProducts(category, companyId = null) {
   }
   
   sql += ` ORDER BY p.id DESC`;
-  return db.prepare(sql).all(...params);
+  try {
+    return db.prepare(sql).all(...params);
+  } catch (e) {
+    console.error(`getProducts error for category "${category}":`, e);
+    return [];
+  }
 }
 
 function findProductByName(itemName, excludeCategory = null, excludeId = null) {
@@ -637,6 +824,37 @@ function findProductByName(itemName, excludeCategory = null, excludeId = null) {
   return null;
 }
 
+function findProductByBarcode(barcode, excludeCategory = null, excludeId = null) {
+  if (!barcode || typeof barcode !== 'string') return null;
+  const cleanBarcode = barcode.trim();
+  if (!cleanBarcode) return null;
+  const lowerBarcode = cleanBarcode.toLowerCase();
+
+  const labels = getCategoryLabels();
+  for (const l of labels) {
+    const cat = l.slug;
+    const catLabel = l.label || cat;
+    let sql = `
+      SELECT p.*, c.name as company_name, '${cat}' as slug, '${catLabel.replace(/'/g, "''")}' as category_label 
+      FROM products_${cat} p
+      LEFT JOIN companies c ON c.id = p.company_id
+      WHERE LOWER(TRIM(COALESCE(p.barcode, ''))) = ?
+    `;
+    const params = [lowerBarcode];
+    if (excludeCategory && excludeId && String(cat).toLowerCase() === String(excludeCategory).toLowerCase()) {
+      sql += ' AND p.id != ?';
+      params.push(Number(excludeId));
+    }
+    try {
+      const match = db.prepare(sql).get(...params);
+      if (match) {
+        return match;
+      }
+    } catch (e) {}
+  }
+  return null;
+}
+
 function addProduct(category, data) {
   const itemName = (data.item_name || data.description || '').trim();
   if (itemName) {
@@ -647,6 +865,23 @@ function addProduct(category, data) {
     }
   }
 
+  if (data.barcode !== undefined && data.barcode !== null) {
+    const cleanBarcode = String(data.barcode).trim();
+    if (cleanBarcode) {
+      const existingBarcode = findProductByBarcode(cleanBarcode);
+      if (existingBarcode) {
+        const catName = existingBarcode.category_label || existingBarcode.slug;
+        throw new Error(`Barcode "${cleanBarcode}" is already assigned to "${existingBarcode.item_name}" under "${catName}".`);
+      }
+      data.barcode = cleanBarcode;
+    } else {
+      delete data.barcode;
+    }
+  }
+
+  if (data.current_stock !== undefined) {
+    data.current_stock = Math.round((Number(data.current_stock) || 0) * 100) / 100;
+  }
   const keys = Object.keys(data);
   const values = Object.values(data);
   const placeholders = keys.map(() => '?').join(', ');
@@ -655,6 +890,9 @@ function addProduct(category, data) {
 }
 
 function updateProduct(category, id, data) {
+  if (data.current_stock !== undefined) {
+    data.current_stock = Math.round((Number(data.current_stock) || 0) * 100) / 100;
+  }
   if (data.item_name !== undefined) {
     const itemName = String(data.item_name || '').trim();
     if (itemName) {
@@ -663,6 +901,20 @@ function updateProduct(category, id, data) {
         const catName = existing.category_label || existing.slug;
         throw new Error(`Item "${existing.item_name || itemName}" is already in stock under "${catName}". Duplicate items cannot be added.`);
       }
+    }
+  }
+
+  if (data.barcode !== undefined && data.barcode !== null) {
+    const cleanBarcode = String(data.barcode).trim();
+    if (cleanBarcode) {
+      const existingBarcode = findProductByBarcode(cleanBarcode, category, id);
+      if (existingBarcode) {
+        const catName = existingBarcode.category_label || existingBarcode.slug;
+        throw new Error(`Barcode "${cleanBarcode}" is already assigned to "${existingBarcode.item_name}" under "${catName}".`);
+      }
+      data.barcode = cleanBarcode;
+    } else {
+      data.barcode = null;
     }
   }
 
@@ -785,7 +1037,25 @@ function deleteProduct(category, id) {
 }
 
 function getCategoryLabels() {
-  return db.prepare('SELECT * FROM category_labels').all();
+  const legacyMap = {
+    panels: 'Biscuits',
+    inverters: 'Cold Drinks',
+    structures: 'Jellies & Candies',
+    cables: 'Snacks & Chips',
+    breakers: 'Chocolates',
+    batteries: 'Dairy & Groceries',
+    misc: 'Juices & Beverages',
+    others: 'General Items'
+  };
+  const solarKeywords = ['panels', 'solar panels', 'inverters', 'solar inverters', 'structures', 'cables', 'breakers', 'batteries', 'accessories', 'solar'];
+  const rows = db.prepare('SELECT * FROM category_labels').all();
+  return rows.map(r => {
+    let lbl = (r.label || '').trim();
+    if (!lbl || solarKeywords.includes(lbl.toLowerCase())) {
+      lbl = legacyMap[r.slug] || 'General Items';
+    }
+    return { ...r, label: lbl };
+  });
 }
 
 function updateCategoryLabel(slug, label) {
@@ -819,8 +1089,8 @@ function searchAllProducts(query = '', companyId = null) {
           params.push(companyId);
         }
       } else {
-        sql += ` WHERE (p.item_name LIKE ? OR p.description LIKE ?)`;
-        params.push(qFuzzy, qFuzzy);
+        sql += ` WHERE (p.item_name LIKE ? OR p.description LIKE ? OR p.barcode LIKE ?)`;
+        params.push(qFuzzy, qFuzzy, qFuzzy);
         if (companyId) {
           sql += ` AND p.company_id = ?`;
           params.push(companyId);
@@ -869,11 +1139,22 @@ function getFavoriteProducts() {
 }
 
 function getCategoryStats() {
-    const labels = getCategoryLabels();
-    return labels.map(l => {
-        const count = db.prepare(`SELECT COUNT(*) as c FROM products_${l.slug}`).get().c || 0;
-        return { ...l, count };
-    });
+    try {
+        const labels = getCategoryLabels();
+        return labels.map(l => {
+            let count = 0;
+            try {
+                const row = db.prepare(`SELECT COUNT(*) as c FROM products_${l.slug}`).get();
+                count = row ? (row.c || 0) : 0;
+            } catch(e) {
+                count = 0;
+            }
+            return { ...l, count };
+        });
+    } catch(e) {
+        console.error('getCategoryStats error:', e);
+        return [];
+    }
 }
 
 function addCategory(label) {
@@ -991,7 +1272,7 @@ function saveProposal(data) {
           const table = getProductTable(oldItem.section);
           if (table) {
             try {
-              db.prepare(`UPDATE ${table} SET current_stock = current_stock + ? WHERE id = ?`).run(oldItem.qty, oldItem.item_id);
+              db.prepare(`UPDATE ${table} SET current_stock = ROUND(current_stock + ?, 2) WHERE id = ?`).run(oldItem.qty, oldItem.item_id);
             } catch (stockErr) {
               console.error(`[STOCK RESTORE EDIT] Failed to restore for ${table}:`, stockErr);
             }
@@ -1021,7 +1302,7 @@ function saveProposal(data) {
             const table = getProductTable(item.section);
             if (table) {
               try {
-                db.prepare(`UPDATE ${table} SET current_stock = MAX(0, current_stock - ?) WHERE id = ?`).run(item.qty, item.item_id);
+                db.prepare(`UPDATE ${table} SET current_stock = MAX(0, ROUND(current_stock - ?, 2)) WHERE id = ?`).run(item.qty, item.item_id);
               } catch(stockErr) {
                 console.error(`[STOCK DEDUCT] Failed to deduct for ${table}:`, stockErr);
               }
@@ -1043,7 +1324,7 @@ function deleteProposal(id) {
         const table = getProductTable(item.section);
         if (table) {
           try {
-            db.prepare(`UPDATE ${table} SET current_stock = current_stock + ? WHERE id = ?`).run(item.qty, item.item_id);
+            db.prepare(`UPDATE ${table} SET current_stock = ROUND(current_stock + ?, 2) WHERE id = ?`).run(item.qty, item.item_id);
           } catch (stockErr) {
             console.error(`[STOCK RESTORE DELETE] Failed to restore for ${table}:`, stockErr);
           }
@@ -1600,15 +1881,15 @@ function deleteUnit(id) {
 }
 
 function getDbPath() {
-  if (app && typeof app.getPath === 'function') {
-    return path.join(app.getPath('userData'), 'ishaq_jadoon.db');
-  }
-  const appData = process.env.APPDATA || (process.platform === 'darwin' ? path.join(process.env.HOME, 'Library/Application Support') : path.join(process.env.HOME, '.config'));
-  return path.join(appData, 'ishaq-jadoon-traders', 'ishaq_jadoon.db');
+  return getDbPathForBranch(currentBranch);
 }
 
 function close() {
-  if (db) db.close();
+  Object.values(branchDbs).forEach(database => {
+    try {
+      if (database && database.open) database.close();
+    } catch(e) {}
+  });
 }
 
 
@@ -1670,7 +1951,7 @@ function addProductStock(data) {
   }
   newCost = Math.round(newCost * 100) / 100;
 
-  const newStock = Math.max(0, oldStock) + inQty;
+  const newStock = Math.round((Math.max(0, oldStock) + inQty) * 100) / 100;
   const newRetail = (retailPrice !== null && retailPrice !== undefined && retailPrice !== '') 
     ? Number(retailPrice) 
     : (current.retail_price || 0);
@@ -1804,10 +2085,11 @@ function markProposalPaid(idOrNumber) {
 }
 
 module.exports = {
-  init, getDbPath, close, backupDatabase, clearAllData,
+  init, getDbPath, getDbPathForBranch, close, backupDatabase, clearAllData,
+  switchBranch, getCurrentBranch, copyCatalogFromBranch,
   addProductStock, getRateHistory, deleteRateHistory, getAllRatesList, markProposalPaid,
   getSettings, saveSettings,
-  getProducts, addProduct, updateProduct, deleteProduct, findProductByName, changeProductCategory,
+  getProducts, addProduct, updateProduct, deleteProduct, findProductByName, findProductByBarcode, changeProductCategory,
   getCategoryLabels, updateCategoryLabel, searchAllProducts, getCategoryStats, addCategory, deleteCategory,
   getProposals, getProposal, saveProposal, deleteProposal, updateProposalStatus, receivePayment, getNextProposalNumber, getNextCustomerName,
   getAllProposalItems,

@@ -1,7 +1,7 @@
 {
-  "name": "ishaq-jadoon-traders",
+  "name": "al-baari-modest-attire",
   "version": "1.0.0",
-  "description": "Ishaq Jadoon Traders Management System",
+  "description": "Al-Baari Modest Attire - EMA Belle by Al-Baari Management System",
   "main": "main.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
@@ -14,15 +14,16 @@
   "license": "ISC",
   "type": "commonjs",
   "dependencies": {
-    "better-sqlite3": "^12.9.0"
+    "better-sqlite3": "^12.9.0",
+    "jsbarcode": "^3.12.3"
   },
   "devDependencies": {
     "electron": "^41.2.0",
     "electron-builder": "^25.1.8"
   },
   "build": {
-    "appId": "com.ishaqjadoon.traders",
-    "productName": "Ishaq Jadoon Traders",
+    "appId": "com.albaari.modestattire",
+    "productName": "Al-Baari Modest Attire",
     "win": {
       "target": "nsis"
     },
