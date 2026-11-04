@@ -27,7 +27,13 @@ async function supabaseFetch(endpoint, options = {}) {
     'Content-Type': 'application/json'
   }, options.headers || {});
 
-  const res = await fetch(url, { ...options, headers });
+  const timeoutMs = options.timeoutMs || 15000;
+  const signal = options.signal || (typeof AbortSignal !== 'undefined' && AbortSignal.timeout ? AbortSignal.timeout(timeoutMs) : undefined);
+
+  const fetchOptions = { ...options, headers };
+  if (signal) fetchOptions.signal = signal;
+
+  const res = await fetch(url, fetchOptions);
   if (!res.ok) {
     const errorText = await res.text();
     throw new Error(`Cloud error (${res.status}): ${errorText}`);

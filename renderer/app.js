@@ -1780,7 +1780,10 @@ const app = {
 
     try {
       const slug = item.slug || item.category_slug || (this.barcodeStickerState.allProducts[0]?.slug) || 'biscuits';
-      if (window.api && window.api.saveProduct) {
+      if (window.api && window.api.updateProduct) {
+        await window.api.updateProduct(slug, item.id, { barcode: randCode });
+        this.showToast('Generated barcode #' + randCode + ' for "' + item.item_name + '"', 'success');
+      } else if (window.api && window.api.saveProduct) {
         await window.api.saveProduct(slug, { ...item, barcode: randCode });
         this.showToast('Generated barcode #' + randCode + ' for "' + item.item_name + '"', 'success');
       }
