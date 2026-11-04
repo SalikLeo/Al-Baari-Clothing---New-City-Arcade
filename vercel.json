@@ -1,0 +1,16 @@
+{
+  "version": 2,
+  "name": "al-baari-modest-attire",
+  "public": true,
+  "outputDirectory": "renderer",
+  "cleanUrls": true,
+  "routes": [
+    {
+      "handle": "filesystem"
+    },
+    {
+      "src": "/(.*)",
+      "dest": "/index.html"
+    }
+  ]
+}
