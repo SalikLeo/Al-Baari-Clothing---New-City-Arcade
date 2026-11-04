@@ -2,12 +2,14 @@
   "name": "al-baari-modest-attire",
   "version": "1.0.0",
   "description": "Al-Baari Modest Attire - Management System",
-  "main": "main.js",
+  "main": "server.js",
   "scripts": {
+    "start": "node server.js",
+    "web": "node server.js",
     "build": "node build.js",
     "build:win": "node build.js",
     "dist": "node build.js",
-    "start": "electron .",
+    "electron:start": "electron main.js",
     "electron:dist": "electron-builder",
     "electron:build": "electron-builder --win"
   },
@@ -16,7 +18,8 @@
   "license": "ISC",
   "type": "commonjs",
   "dependencies": {
-    "jsbarcode": "^3.12.3"
+    "jsbarcode": "^3.12.3",
+    "mysql2": "^3.24.6"
   },
   "optionalDependencies": {
     "better-sqlite3": "^12.9.0"
