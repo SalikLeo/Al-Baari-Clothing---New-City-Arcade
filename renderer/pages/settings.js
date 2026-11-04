@@ -96,29 +96,20 @@ const Settings = {
                     <h4 class="font-bold text-slate-800 text-sm">Security Password</h4>
                     <p class="text-xs text-slate-500 mb-3">Set a password to restrict access to selected tabs. Leave blank to disable protection.</p>
                     
-                     <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-3">
-                       <div>
-                         <label class="block text-[10px] font-bold text-slate-400 uppercase mb-1">New Password</label>
-                         <div class="relative">
-                           <input type="password" id="set-stock-password" placeholder="••••••••" class="w-full border border-slate-200 rounded-lg p-2 pr-9 text-sm focus:ring-1 focus:ring-accent outline-none">
+                     <div class="mb-3">
+                       <label class="block text-[10px] font-bold text-slate-400 uppercase mb-1">Security Password</label>
+                       <div class="flex items-center gap-2">
+                         <div class="relative flex-1">
+                           <input type="password" id="set-stock-password" placeholder="Enter password (leave blank for none)" class="w-full border border-slate-200 rounded-lg p-2 pr-9 text-sm focus:ring-1 focus:ring-accent outline-none">
                            <button type="button" onclick="Settings.togglePasswordVisibility('set-stock-password', this)" class="password-visibility-toggle absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 transition-colors p-1">
                              <i data-lucide="eye" class="w-4 h-4"></i>
                            </button>
                          </div>
-                       </div>
-                       <div>
-                         <label class="block text-[10px] font-bold text-slate-400 uppercase mb-1">Confirm Password</label>
-                         <div class="relative">
-                           <input type="password" id="set-stock-password-confirm" placeholder="••••••••" class="w-full border border-slate-200 rounded-lg p-2 pr-9 text-sm focus:ring-1 focus:ring-accent outline-none">
-                           <button type="button" onclick="Settings.togglePasswordVisibility('set-stock-password-confirm', this)" class="password-visibility-toggle absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 transition-colors p-1">
-                             <i data-lucide="eye" class="w-4 h-4"></i>
-                           </button>
-                         </div>
+                         <button type="button" id="btn-remove-stock-pass" onclick="Settings.removeStockPassword()" class="hidden px-3 py-2 bg-rose-50 text-rose-600 hover:bg-rose-100 border border-rose-200 rounded-lg text-xs font-bold transition-all flex items-center gap-1.5 shrink-0" title="Delete current password">
+                            <i data-lucide="trash-2" class="w-3.5 h-3.5"></i> Delete Password
+                         </button>
                        </div>
                      </div>
-                     <button type="button" id="btn-remove-stock-pass" onclick="Settings.removeStockPassword()" class="hidden text-[10px] font-bold text-rose-500 hover:text-rose-700 uppercase tracking-widest flex items-center gap-1.5 transition-colors mb-3">
-                        <i data-lucide="unlock" class="w-3 h-3"></i> Remove Current Password
-                     </button>
 
                      <!-- Dropdown of Lockable Tabs with Checkmarks -->
                      <div class="pt-3 border-t border-slate-100">
@@ -406,32 +397,10 @@ const Settings = {
 
     const stockPassword = window.storage.get('stock_password') || '';
     const passInput = document.getElementById('set-stock-password');
-    const confirmInput = document.getElementById('set-stock-password-confirm');
-    
-    if (passInput && confirmInput) {
+    if (passInput) {
         passInput.value = stockPassword;
-        confirmInput.value = stockPassword;
-        
-        const hasPassword = !!stockPassword;
-        passInput.disabled = hasPassword;
-        confirmInput.disabled = hasPassword;
-        
-        // Visual feedback
-        [passInput, confirmInput].forEach(el => {
-            el.classList.toggle('opacity-50', hasPassword);
-            el.classList.toggle('bg-slate-50', hasPassword);
-            el.classList.toggle('cursor-not-allowed', hasPassword);
-        });
-
-        // Toggle buttons state
-        const toggleBtns = document.querySelectorAll('.password-visibility-toggle');
-        toggleBtns.forEach(btn => {
-            if (hasPassword) {
-                btn.classList.add('pointer-events-none', 'opacity-30');
-            } else {
-                btn.classList.remove('pointer-events-none', 'opacity-30');
-            }
-        });
+        passInput.disabled = false;
+        passInput.classList.remove('opacity-50', 'bg-slate-50', 'cursor-not-allowed');
     }
     
     const removeBtn = document.getElementById('btn-remove-stock-pass');
@@ -439,6 +408,7 @@ const Settings = {
         if (stockPassword) removeBtn.classList.remove('hidden');
         else removeBtn.classList.add('hidden');
     }
+    if (window.lucide) lucide.createIcons();
 
     this.renderTabDropdown();
 
@@ -456,34 +426,20 @@ const Settings = {
     }
   },
 
-  async removeStockPassword() {
-    const currentPass = window.storage.get('stock_password');
-    if (!currentPass) return;
-
-    app.showPrompt({
-      title: 'Remove Password',
-      message: 'Please enter your current password to disable tab access protection:',
-      type: 'password',
-      onConfirm: (input) => {
-        if (input === currentPass) {
-          window.storage.set('stock_password', '');
-          window.storage.set('locked_tabs', []);
-          app.isStockUnlocked = false;
-          app.unlockedTabs = {};
-          app.showAlert({
-            title: 'Password Removed',
-            message: 'Tab access protection has been disabled.',
-            buttonText: 'OK'
-          });
-          this.reloadSettings();
-        } else {
-          app.showAlert({
-            title: 'Error',
-            message: 'Incorrect password. Removal failed.',
-            buttonText: 'Try Again'
-          });
-        }
-      }
+  removeStockPassword() {
+    window.storage.set('stock_password', '');
+    window.storage.set('locked_tabs', []);
+    app.isStockUnlocked = false;
+    app.unlockedTabs = {};
+    const passInput = document.getElementById('set-stock-password');
+    if (passInput) passInput.value = '';
+    const removeBtn = document.getElementById('btn-remove-stock-pass');
+    if (removeBtn) removeBtn.classList.add('hidden');
+    this.renderTabDropdown();
+    app.showAlert({
+      title: 'Password Deleted',
+      message: 'Security password has been removed and tab access protection disabled.',
+      buttonText: 'OK'
     });
   },
 
@@ -534,21 +490,18 @@ const Settings = {
       
       // Save Stock Password
       const passInput = document.getElementById('set-stock-password');
-      const confirmInput = document.getElementById('set-stock-password-confirm');
-      const stockPass = passInput ? passInput.value : '';
-      const stockPassConfirm = confirmInput ? confirmInput.value : '';
-
-      if (stockPass !== stockPassConfirm) {
-        app.hideLoading();
-        return app.showAlert("Passwords do not match!");
-      }
+      const stockPass = passInput ? passInput.value.trim() : '';
 
       window.storage.set('stock_password', stockPass);
       app.isStockUnlocked = false; // Require re-entry with new password
-      // Ensure locked_tabs is initialized if not already set
-      const currentLocked = window.storage.get('locked_tabs');
-      if (stockPass && (currentLocked === null || currentLocked === undefined)) {
+      if (!stockPass) {
         window.storage.set('locked_tabs', []);
+        app.unlockedTabs = {};
+      } else {
+        const currentLocked = window.storage.get('locked_tabs');
+        if (currentLocked === null || currentLocked === undefined) {
+          window.storage.set('locked_tabs', []);
+        }
       }
 
       // Update app state
