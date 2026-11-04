@@ -803,8 +803,12 @@ const Settings = {
       }
 
       if (uploadLabel) {
-        if (status.localSyncTime) {
-          const d = new Date(status.localSyncTime);
+        const syncTime = status.localSyncTime || window.localStorage.getItem('last_cloud_sync_time');
+        if (syncTime) {
+          const d = new Date(syncTime);
+          uploadLabel.textContent = 'Last upload: ' + d.toLocaleDateString() + ' at ' + d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+        } else if (status.cloudMeta && status.cloudMeta.timestamp) {
+          const d = new Date(status.cloudMeta.timestamp);
           uploadLabel.textContent = 'Last upload: ' + d.toLocaleDateString() + ' at ' + d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
         } else {
           uploadLabel.textContent = 'Last upload: Never from this laptop';
@@ -863,6 +867,10 @@ const Settings = {
     try {
       const res = await window.api.cloudSyncUpload();
       if (!res.success) throw new Error(res.error || 'Failed to upload snapshot');
+
+      if (res.timestamp) {
+        window.localStorage.setItem('last_cloud_sync_time', res.timestamp);
+      }
 
       await this.refreshCloudStatus();
 

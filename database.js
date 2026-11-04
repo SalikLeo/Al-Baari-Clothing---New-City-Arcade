@@ -737,6 +737,15 @@ function saveSettings(data) {
 }
 
 // ------ APP KV STORAGE ------
+function getKv(key) {
+  try {
+    const row = db.prepare('SELECT value FROM app_kv_store WHERE key = ?').get(key);
+    return row ? row.value : null;
+  } catch (e) {
+    return null;
+  }
+}
+
 function getAllKv() {
   try {
     return db.prepare('SELECT key, value FROM app_kv_store').all();
@@ -2300,5 +2309,5 @@ module.exports = {
   toggleFavorite,
   getFavoriteProducts,
   getUnits, addUnit, updateUnit, deleteUnit,
-  getAllKv, setKv, saveAllKv
+  getKv, getAllKv, setKv, saveAllKv
 };

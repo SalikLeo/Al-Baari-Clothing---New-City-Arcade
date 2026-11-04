@@ -87,8 +87,17 @@ function createWindow() {
 
       // Auto-cloud sync on close if enabled
       try {
-        const kv = db.getAllKv ? db.getAllKv() : {};
-        if (kv && kv.auto_cloud_sync === 'true') {
+        let autoSync = false;
+        if (db.getKv) {
+          autoSync = db.getKv('auto_cloud_sync') === 'true';
+        } else if (db.getAllKv) {
+          const kvList = db.getAllKv();
+          if (Array.isArray(kvList)) {
+            const item = kvList.find(x => x.key === 'auto_cloud_sync');
+            autoSync = item && item.value === 'true';
+          }
+        }
+        if (autoSync) {
           console.log('[AutoCloudSync] Syncing to Supabase cloud before close...');
           const branch = db.getCurrentBranch ? db.getCurrentBranch() : 'b1';
           await cloudSync.uploadToCloud(branch);

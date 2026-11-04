@@ -197,12 +197,29 @@ async function getCloudStatus(branchId = 'b1') {
 
   let localSyncTime = null;
   let localRestoreTime = null;
-  if (dbInstance && typeof dbInstance.getAllKv === 'function') {
-    try {
-      const kv = dbInstance.getAllKv();
-      localSyncTime = kv.last_cloud_sync_time || null;
-      localRestoreTime = kv.last_cloud_restore_time || null;
-    } catch (e) {}
+  if (dbInstance) {
+    if (typeof dbInstance.getKv === 'function') {
+      try {
+        localSyncTime = dbInstance.getKv('last_cloud_sync_time');
+        localRestoreTime = dbInstance.getKv('last_cloud_restore_time');
+      } catch (e) {}
+    } else if (typeof dbInstance.getAllKv === 'function') {
+      try {
+        const kvList = dbInstance.getAllKv();
+        if (Array.isArray(kvList)) {
+          const syncItem = kvList.find(x => x.key === 'last_cloud_sync_time');
+          const restoreItem = kvList.find(x => x.key === 'last_cloud_restore_time');
+          if (syncItem) localSyncTime = syncItem.value;
+          if (restoreItem) localRestoreTime = restoreItem.value;
+        }
+      } catch (e) {}
+    }
+  }
+
+  // If this device created the latest cloud snapshot, fallback to that timestamp
+  const hostname = os.hostname();
+  if (!localSyncTime && cloudMeta && cloudMeta.device === hostname && cloudMeta.timestamp) {
+    localSyncTime = cloudMeta.timestamp;
   }
 
   return {
