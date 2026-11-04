@@ -625,6 +625,7 @@ function seedInitialData(branchId = 'b1') {
 
 function clearAllData() {
   try {
+    db.pragma('foreign_keys = OFF');
     const transaction = db.transaction(() => {
       // 1. Delete all rows from dynamic product tables
       const productTables = db.prepare("SELECT name FROM sqlite_master WHERE type='table' AND name LIKE 'products_%'").all();
@@ -636,10 +637,10 @@ function clearAllData() {
         }
       });
 
-      // 2. Delete all records from transactional & operational tables
+      // 2. Delete all records from transactional & operational tables (child tables first)
       const tablesToClear = [
-        'proposals',
         'proposal_items',
+        'proposals',
         'product_rate_history',
         'expenses',
         'companies',
@@ -699,6 +700,7 @@ function clearAllData() {
     });
 
     transaction();
+    db.pragma('foreign_keys = ON');
 
     try {
       db.pragma('wal_checkpoint(TRUNCATE)');
