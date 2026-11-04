@@ -13,6 +13,13 @@ const { URL } = require('url');
 
 const PORT = parseInt(process.env.PORT || '3000', 10);
 
+process.on('uncaughtException', (err) => {
+  console.error('[Server Uncaught Exception]:', err);
+});
+process.on('unhandledRejection', (reason, p) => {
+  console.error('[Server Unhandled Rejection]:', reason);
+});
+
 // Try to parse credentials from process.env or api/config.php
 let dbConfig = {
   host: process.env.DB_HOST || 'localhost',

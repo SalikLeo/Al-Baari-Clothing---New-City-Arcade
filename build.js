@@ -22,8 +22,14 @@ const rendererDir = path.join(__dirname, 'renderer');
 const apiDir = path.join(__dirname, 'api');
 const htaccessPath = path.join(__dirname, '.htaccess');
 
+if (!fs.existsSync(distDir)) {
+  fs.mkdirSync(distDir, { recursive: true });
+}
+
 // Copy renderer to dist
-copyDir(rendererDir, distDir);
+if (fs.existsSync(rendererDir)) {
+  copyDir(rendererDir, distDir);
+}
 
 // Copy api to dist/api
 if (fs.existsSync(apiDir)) {
@@ -33,6 +39,15 @@ if (fs.existsSync(apiDir)) {
 // Copy .htaccess to dist/.htaccess
 if (fs.existsSync(htaccessPath)) {
   fs.copyFileSync(htaccessPath, path.join(distDir, '.htaccess'));
+}
+
+// Copy server scripts to dist in case Hostinger runs inside output dir
+const serverFiles = ['server.js', 'app.js', 'index.js', 'database.js', 'package.json'];
+for (const file of serverFiles) {
+  const p = path.join(__dirname, file);
+  if (fs.existsSync(p)) {
+    fs.copyFileSync(p, path.join(distDir, file));
+  }
 }
 
 console.log('✅ Web build completed! All assets packaged into dist/');
