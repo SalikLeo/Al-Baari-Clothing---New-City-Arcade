@@ -214,52 +214,36 @@ const Settings = {
               </div>
             </div>
           </div>
-          <!-- Cloud Database & Online Sync (Supabase) -->
+          <!-- Hostinger Web & Cloud Server -->
           <div class="bg-white rounded-xl shadow-sm border border-slate-100 overflow-hidden">
             <div class="p-4 border-b border-slate-100 bg-slate-50 flex items-center justify-between">
               <div class="flex items-center gap-2">
-                <div class="w-7 h-7 rounded-lg bg-emerald-50 text-emerald-600 flex items-center justify-center">
-                  <i data-lucide="cloud" class="w-4 h-4"></i>
+                <div class="w-7 h-7 rounded-lg bg-indigo-50 text-indigo-600 flex items-center justify-center">
+                  <i data-lucide="globe" class="w-4 h-4"></i>
                 </div>
-                <h3 class="font-bold text-lg text-slate-700">Online Cloud Database (Supabase)</h3>
+                <h3 class="font-bold text-lg text-slate-700">Hostinger Online Server</h3>
               </div>
-              <span id="supabase-status-badge" class="text-[10px] font-black uppercase tracking-wider px-2.5 py-0.5 rounded-full bg-slate-100 text-slate-600 flex items-center gap-1 shadow-2xs">
+              <span id="hostinger-status-badge" class="text-[10px] font-black uppercase tracking-wider px-2.5 py-0.5 rounded-full bg-slate-100 text-slate-600 flex items-center gap-1 shadow-2xs">
                 Checking...
               </span>
             </div>
             <div class="p-4 space-y-3.5">
               <p class="text-xs text-slate-500 leading-relaxed">
-                Connect this application to your Supabase PostgreSQL cloud database for multi-device live sync, online POS access, and deployment on Vercel.
+                Connect this application to your Hostinger domain. When uploaded to Hostinger, the app automatically connects to your online MySQL database.
               </p>
 
               <div>
-                <label class="block text-[11px] font-bold text-slate-500 uppercase tracking-wide mb-1">Supabase Project URL</label>
-                <input type="text" id="set-supabase-url" placeholder="https://your-project-id.supabase.co" class="w-full border border-slate-200 rounded-lg p-2 text-xs font-mono focus:ring-1 focus:ring-accent outline-none">
-              </div>
-
-              <div>
-                <label class="block text-[11px] font-bold text-slate-500 uppercase tracking-wide mb-1">Supabase Anon Key (Public / Client)</label>
-                <div class="relative">
-                  <input type="password" id="set-supabase-key" placeholder="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..." class="w-full border border-slate-200 rounded-lg p-2 pr-9 text-xs font-mono focus:ring-1 focus:ring-accent outline-none">
-                  <button type="button" onclick="Settings.togglePasswordVisibility('set-supabase-key', this)" class="password-visibility-toggle absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 transition-colors p-1">
-                    <i data-lucide="eye" class="w-4 h-4"></i>
-                  </button>
-                </div>
-              </div>
-
-              <div class="pt-1">
-                <label class="flex items-center gap-2 text-xs font-bold text-slate-700 cursor-pointer select-none">
-                  <input type="checkbox" id="set-use-cloud-supabase" class="w-4 h-4 rounded text-amber-500 focus:ring-amber-400 accent-amber-500">
-                  <span>Always use Online Cloud Database (even in desktop app)</span>
-                </label>
+                <label class="block text-[11px] font-bold text-slate-500 uppercase tracking-wide mb-1">Hostinger API Endpoint URL</label>
+                <input type="text" id="set-hostinger-url" placeholder="https://yourdomain.com/api (Leave blank for auto)" class="w-full border border-slate-200 rounded-lg p-2 text-xs font-mono focus:ring-1 focus:ring-accent outline-none">
+                <span class="text-[10px] text-slate-400 mt-1 block">Default: automatically detects <code>/api</code> on your Hostinger domain.</span>
               </div>
 
               <div class="flex items-center gap-2 pt-2 border-t border-slate-100">
-                <button type="button" onclick="Settings.saveSupabaseConfig()" class="bg-emerald-600 hover:bg-emerald-700 active:scale-[0.98] text-white font-bold px-4 py-2 rounded-lg text-xs transition-all flex items-center gap-1.5 shadow-sm cursor-pointer">
+                <button type="button" onclick="Settings.saveHostingerConfig()" class="bg-indigo-600 hover:bg-indigo-700 active:scale-[0.98] text-white font-bold px-4 py-2 rounded-lg text-xs transition-all flex items-center gap-1.5 shadow-sm cursor-pointer">
                   <i data-lucide="save" class="w-3.5 h-3.5"></i>
-                  Save & Connect
+                  Save Settings
                 </button>
-                <button type="button" onclick="Settings.testSupabaseConnection()" class="bg-white hover:bg-slate-50 text-slate-700 border border-slate-200 font-bold px-3.5 py-2 rounded-lg text-xs transition-all flex items-center gap-1.5 shadow-2xs cursor-pointer">
+                <button type="button" onclick="Settings.testHostingerConnection()" class="bg-white hover:bg-slate-50 text-slate-700 border border-slate-200 font-bold px-3.5 py-2 rounded-lg text-xs transition-all flex items-center gap-1.5 shadow-2xs cursor-pointer">
                   <i data-lucide="activity" class="w-3.5 h-3.5"></i>
                   Test Connection
                 </button>
@@ -415,7 +399,7 @@ const Settings = {
     }
 
     this.renderTabDropdown();
-    this.reloadSupabaseStatus();
+    this.reloadHostingerStatus();
 
     if (window.api && window.api.getBackupDirectory) {
       try {
@@ -750,111 +734,66 @@ const Settings = {
     if (window.lucide) lucide.createIcons();
   },
 
-  async reloadSupabaseStatus() {
-    const urlInput = document.getElementById('set-supabase-url');
-    const keyInput = document.getElementById('set-supabase-key');
-    const cloudCheck = document.getElementById('set-use-cloud-supabase');
-    const badge = document.getElementById('supabase-status-badge');
-
-    const savedUrl = window.localStorage.getItem('supabase_url') || (window.SUPABASE_CONFIG && window.SUPABASE_CONFIG.url) || '';
-    const savedKey = window.localStorage.getItem('supabase_anon_key') || (window.SUPABASE_CONFIG && window.SUPABASE_CONFIG.anonKey) || '';
-    const forceCloud = window.localStorage.getItem('use_cloud_supabase') === 'true';
+  async reloadHostingerStatus() {
+    const urlInput = document.getElementById('set-hostinger-url');
+    const badge = document.getElementById('hostinger-status-badge');
+    const savedUrl = window.localStorage.getItem('hostinger_api_url') || '';
 
     if (urlInput) urlInput.value = savedUrl;
-    if (keyInput) keyInput.value = savedKey;
-    if (cloudCheck) cloudCheck.checked = forceCloud;
-
     if (!badge) return;
 
-    if (!savedUrl || !savedKey) {
-      badge.className = 'text-[10px] font-black uppercase tracking-wider px-2 py-0.5 rounded-full bg-slate-100 text-slate-500 flex items-center gap-1';
-      badge.innerHTML = '<span class="w-1.5 h-1.5 rounded-full bg-slate-400"></span> Not Configured';
-      return;
-    }
-
-    if (window.api && typeof window.api.testConnection === 'function') {
-      badge.className = 'text-[10px] font-black uppercase tracking-wider px-2 py-0.5 rounded-full bg-amber-50 text-amber-700 flex items-center gap-1';
-      badge.innerHTML = '<span class="w-1.5 h-1.5 rounded-full bg-amber-500 animate-pulse"></span> Testing...';
-      const res = await window.api.testConnection(savedUrl, savedKey);
-      if (res.success) {
-        badge.className = 'text-[10px] font-black uppercase tracking-wider px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800 flex items-center gap-1';
-        badge.innerHTML = '<span class="w-1.5 h-1.5 rounded-full bg-emerald-500"></span> Online & Connected';
-      } else {
-        badge.className = 'text-[10px] font-black uppercase tracking-wider px-2 py-0.5 rounded-full bg-rose-100 text-rose-800 flex items-center gap-1';
-        badge.innerHTML = '<span class="w-1.5 h-1.5 rounded-full bg-rose-500"></span> Connection Error';
-        badge.title = res.error || '';
-      }
+    if (window.api && window.api.isHostinger) {
+      badge.className = 'text-[10px] font-black uppercase tracking-wider px-2.5 py-0.5 rounded-full bg-emerald-100 text-emerald-800 flex items-center gap-1';
+      badge.innerHTML = '<span class="w-1.5 h-1.5 rounded-full bg-emerald-500"></span> Online (Hostinger)';
     } else {
-      badge.className = 'text-[10px] font-black uppercase tracking-wider px-2 py-0.5 rounded-full bg-blue-100 text-blue-800 flex items-center gap-1';
-      badge.innerHTML = '<span class="w-1.5 h-1.5 rounded-full bg-blue-500"></span> Ready';
+      badge.className = 'text-[10px] font-black uppercase tracking-wider px-2.5 py-0.5 rounded-full bg-blue-100 text-blue-800 flex items-center gap-1';
+      badge.innerHTML = '<span class="w-1.5 h-1.5 rounded-full bg-blue-500"></span> Local Desktop Mode';
     }
   },
 
-  async saveSupabaseConfig() {
-    const url = (document.getElementById('set-supabase-url')?.value || '').trim();
-    const key = (document.getElementById('set-supabase-key')?.value || '').trim();
-    const forceCloud = document.getElementById('set-use-cloud-supabase')?.checked || false;
-
-    window.localStorage.setItem('supabase_url', url);
-    window.localStorage.setItem('supabase_anon_key', key);
-    window.localStorage.setItem('use_cloud_supabase', forceCloud ? 'true' : 'false');
-
-    if (window.SUPABASE_CONFIG) {
-      window.SUPABASE_CONFIG.url = url;
-      window.SUPABASE_CONFIG.anonKey = key;
-      window.SUPABASE_CONFIG.forceCloudMode = forceCloud;
-    }
-
-    await this.testSupabaseConnection();
+  async saveHostingerConfig() {
+    const url = (document.getElementById('set-hostinger-url')?.value || '').trim();
+    window.localStorage.setItem('hostinger_api_url', url);
+    await this.testHostingerConnection();
   },
 
-  async testSupabaseConnection() {
-    const url = (document.getElementById('set-supabase-url')?.value || '').trim();
-    const key = (document.getElementById('set-supabase-key')?.value || '').trim();
-    const badge = document.getElementById('supabase-status-badge');
-
-    if (!url || !key) {
-      return app.showAlert({
-        title: 'Credentials Required',
-        message: 'Please enter both your Supabase Project URL and Anon Public Key.',
-        buttonText: 'OK'
-      });
-    }
+  async testHostingerConnection() {
+    const url = (document.getElementById('set-hostinger-url')?.value || '').trim();
+    const badge = document.getElementById('hostinger-status-badge');
 
     if (badge) {
-      badge.className = 'text-[10px] font-black uppercase tracking-wider px-2 py-0.5 rounded-full bg-amber-50 text-amber-700 flex items-center gap-1';
+      badge.className = 'text-[10px] font-black uppercase tracking-wider px-2.5 py-0.5 rounded-full bg-amber-50 text-amber-700 flex items-center gap-1';
       badge.innerHTML = '<span class="w-1.5 h-1.5 rounded-full bg-amber-500 animate-pulse"></span> Testing...';
     }
 
     if (window.api && typeof window.api.testConnection === 'function') {
-      const res = await window.api.testConnection(url, key);
+      const res = await window.api.testConnection(url);
       if (res.success) {
         if (badge) {
-          badge.className = 'text-[10px] font-black uppercase tracking-wider px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800 flex items-center gap-1';
-          badge.innerHTML = '<span class="w-1.5 h-1.5 rounded-full bg-emerald-500"></span> Online & Connected';
+          badge.className = 'text-[10px] font-black uppercase tracking-wider px-2.5 py-0.5 rounded-full bg-emerald-100 text-emerald-800 flex items-center gap-1';
+          badge.innerHTML = '<span class="w-1.5 h-1.5 rounded-full bg-emerald-500"></span> Connected';
         }
         app.showAlert({
-          title: 'Supabase Connected!',
-          message: 'Connection to Supabase PostgreSQL database verified successfully! Data will now synchronize with your cloud database.',
+          title: 'Connected Successfully!',
+          message: 'Connection to your Hostinger server verified successfully!',
           buttonText: 'Great'
         });
       } else {
         if (badge) {
-          badge.className = 'text-[10px] font-black uppercase tracking-wider px-2 py-0.5 rounded-full bg-rose-100 text-rose-800 flex items-center gap-1';
-          badge.innerHTML = '<span class="w-1.5 h-1.5 rounded-full bg-rose-500"></span> Failed';
+          badge.className = 'text-[10px] font-black uppercase tracking-wider px-2.5 py-0.5 rounded-full bg-rose-100 text-rose-800 flex items-center gap-1';
+          badge.innerHTML = '<span class="w-1.5 h-1.5 rounded-full bg-rose-500"></span> Connection Error';
         }
         app.showAlert({
           title: 'Connection Failed',
-          message: 'Could not connect to Supabase: ' + (res.error || 'Check your URL and API Key.'),
+          message: 'Could not connect to Hostinger API: ' + (res.error || 'Check your URL or make sure files are uploaded.'),
           buttonText: 'Close'
         });
       }
     } else {
       app.showAlert({
         title: 'Saved',
-        message: 'Supabase configuration saved. Reloading app to apply cloud settings...',
-        buttonText: 'OK',
-        onConfirm: () => window.location.reload()
+        message: 'Hostinger configuration saved.',
+        buttonText: 'OK'
       });
     }
   },
