@@ -1,29 +1,29 @@
 {
   "name": "al-baari-modest-attire",
   "version": "1.0.0",
-  "description": "Al-Baari Modest Attire - EMA Belle by Al-Baari Management System",
+  "description": "Al-Baari Modest Attire - Management System",
   "main": "main.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1",
+    "build": "node build.js",
     "start": "electron .",
-    "dist": "electron-builder",
-    "build:win": "electron-builder --win"
+    "electron:dist": "electron-builder",
+    "electron:build": "electron-builder --win"
   },
   "keywords": [],
   "author": "",
   "license": "ISC",
   "type": "commonjs",
   "dependencies": {
-    "@supabase/supabase-js": "^2.118.0",
-    "better-sqlite3": "^12.9.0",
-    "dotenv": "^18.0.9",
     "jsbarcode": "^3.12.3"
+  },
+  "optionalDependencies": {
+    "better-sqlite3": "^12.9.0"
   },
   "devDependencies": {
     "electron": "^41.2.0",
     "electron-builder": "^25.1.8"
   },
-  "build": {
+  "electronBuilder": {
     "appId": "com.albaari.modestattire",
     "productName": "Al-Baari Modest Attire",
     "win": {
@@ -35,11 +35,12 @@
       "createDesktopShortcut": true
     },
     "directories": {
-      "output": "dist"
+      "output": "dist-electron"
     },
     "files": [
       "**/*",
       "!dist",
+      "!dist-electron",
       "!node_modules/@electron/rebuild/**/*"
     ]
   }
