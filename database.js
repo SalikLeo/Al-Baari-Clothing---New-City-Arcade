@@ -884,8 +884,19 @@ function addProduct(category, data) {
   if (data.current_stock !== undefined) {
     data.current_stock = Math.round((Number(data.current_stock) || 0) * 100) / 100;
   }
-  const keys = Object.keys(data);
-  const values = Object.values(data);
+
+  // Filter against actual columns of the table to prevent unknown column errors (e.g. category)
+  const tableInfo = db.prepare(`PRAGMA table_info(products_${category})`).all();
+  const columns = tableInfo.map(c => c.name);
+  const cleanData = {};
+  for (const [key, value] of Object.entries(data)) {
+    if (columns.includes(key) && key !== 'id') {
+      cleanData[key] = value;
+    }
+  }
+
+  const keys = Object.keys(cleanData);
+  const values = Object.values(cleanData);
   const placeholders = keys.map(() => '?').join(', ');
   const info = db.prepare(`INSERT INTO products_${category} (${keys.join(', ')}) VALUES (${placeholders})`).run(...values);
   return info.lastInsertRowid;
@@ -1377,14 +1388,21 @@ function getExpenses(filters) {
 }
 
 function saveExpense(data) {
+  const tableInfo = db.prepare("PRAGMA table_info(expenses)").all();
+  const columns = tableInfo.map(c => c.name);
+  const cleanData = {};
+  for (const [k, v] of Object.entries(data)) {
+    if (columns.includes(k) && k !== 'id') cleanData[k] = v;
+  }
+
   if (data.id) {
-    const { id, ...updates } = data;
-    const clause = Object.keys(updates).map(k => `${k} = @${k}`).join(', ');
-    db.prepare(`UPDATE expenses SET ${clause} WHERE id = @id`).run(data);
+    cleanData.id = data.id;
+    const clause = Object.keys(cleanData).filter(k => k !== 'id').map(k => `${k} = @${k}`).join(', ');
+    db.prepare(`UPDATE expenses SET ${clause} WHERE id = @id`).run(cleanData);
   } else {
-    const keys = Object.keys(data);
+    const keys = Object.keys(cleanData);
     const placeholders = keys.map(k => `@${k}`).join(', ');
-    db.prepare(`INSERT INTO expenses (${keys.join(', ')}) VALUES (${placeholders})`).run(data);
+    db.prepare(`INSERT INTO expenses (${keys.join(', ')}) VALUES (${placeholders})`).run(cleanData);
   }
 }
 
@@ -1459,14 +1477,21 @@ function getCompanies() {
 }
 
 function saveCompany(data) {
+  const tableInfo = db.prepare("PRAGMA table_info(companies)").all();
+  const columns = tableInfo.map(c => c.name);
+  const cleanData = {};
+  for (const [k, v] of Object.entries(data)) {
+    if (columns.includes(k) && k !== 'id') cleanData[k] = v;
+  }
+
   if (data.id) {
-    const { id, ...updates } = data;
-    const clause = Object.keys(updates).map(k => `${k} = @${k}`).join(', ');
-    db.prepare(`UPDATE companies SET ${clause} WHERE id = @id`).run(data);
+    cleanData.id = data.id;
+    const clause = Object.keys(cleanData).filter(k => k !== 'id').map(k => `${k} = @${k}`).join(', ');
+    db.prepare(`UPDATE companies SET ${clause} WHERE id = @id`).run(cleanData);
   } else {
-    const keys = Object.keys(data);
+    const keys = Object.keys(cleanData);
     const placeholders = keys.map(k => `@${k}`).join(', ');
-    db.prepare(`INSERT INTO companies (${keys.join(', ')}) VALUES (${placeholders})`).run(data);
+    db.prepare(`INSERT INTO companies (${keys.join(', ')}) VALUES (${placeholders})`).run(cleanData);
   }
 }
 
@@ -1482,15 +1507,22 @@ function getCustomers() {
 function saveCustomer(data) {
   let customerId;
   const transaction = db.transaction(() => {
+    const tableInfo = db.prepare("PRAGMA table_info(customers)").all();
+    const columns = tableInfo.map(c => c.name);
+    const cleanData = {};
+    for (const [k, v] of Object.entries(data)) {
+      if (columns.includes(k) && k !== 'id') cleanData[k] = v;
+    }
+
     if (data.id) {
-      const { id, ...updates } = data;
-      const clause = Object.keys(updates).map(k => `${k} = @${k}`).join(', ');
-      db.prepare(`UPDATE customers SET ${clause} WHERE id = @id`).run(data);
+      cleanData.id = data.id;
+      const clause = Object.keys(cleanData).filter(k => k !== 'id').map(k => `${k} = @${k}`).join(', ');
+      db.prepare(`UPDATE customers SET ${clause} WHERE id = @id`).run(cleanData);
       customerId = data.id;
     } else {
-      const keys = Object.keys(data);
+      const keys = Object.keys(cleanData);
       const placeholders = keys.map(k => `@${k}`).join(', ');
-      const info = db.prepare(`INSERT INTO customers (${keys.join(', ')}) VALUES (${placeholders})`).run(data);
+      const info = db.prepare(`INSERT INTO customers (${keys.join(', ')}) VALUES (${placeholders})`).run(cleanData);
       customerId = info.lastInsertRowid;
     }
   });

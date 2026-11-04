@@ -250,17 +250,31 @@ async function handleApiAction(action, branchId, query, input) {
       }
       return null;
 
-    case 'addProduct':
+    case 'addProduct': {
+      const cat = input.category || input.category_slug || query.category;
+      const data = Object.assign({}, input);
+      delete data.category;
+      delete data.category_slug;
+      delete data.branch_id;
       if (sqliteDb && typeof sqliteDb.addProduct === 'function') {
-        return sqliteDb.addProduct(input.category || input.category_slug, input);
+        return sqliteDb.addProduct(cat, data);
       }
       return { id: Date.now() };
+    }
 
-    case 'updateProduct':
+    case 'updateProduct': {
+      const cat = input.category || input.category_slug || query.category;
+      const id = input.id || query.id;
+      const data = Object.assign({}, input);
+      delete data.category;
+      delete data.category_slug;
+      delete data.branch_id;
+      delete data.id;
       if (sqliteDb && typeof sqliteDb.updateProduct === 'function') {
-        return sqliteDb.updateProduct(input.category || input.category_slug, input.id, input);
+        return sqliteDb.updateProduct(cat, id, data);
       }
       return { success: true };
+    }
 
     case 'deleteProduct':
       if (sqliteDb && typeof sqliteDb.deleteProduct === 'function') {
