@@ -4,6 +4,8 @@ const fs = require('fs');
 
 app.setName('al-baari-modest-attire');
 const db = require('./database');
+const cloudSync = require('./cloud-sync');
+cloudSync.setDb(db);
 
 let mainWindow;
 let isQuitting = false;
@@ -82,6 +84,18 @@ function createWindow() {
       }
 
       await performAutoBackup();
+
+      // Auto-cloud sync on close if enabled
+      try {
+        const kv = db.getAllKv ? db.getAllKv() : {};
+        if (kv && kv.auto_cloud_sync === 'true') {
+          console.log('[AutoCloudSync] Syncing to Supabase cloud before close...');
+          const branch = db.getCurrentBranch ? db.getCurrentBranch() : 'b1';
+          await cloudSync.uploadToCloud(branch);
+        }
+      } catch (cloudErr) {
+        console.warn('[AutoCloudSync] Warning during close sync:', cloudErr.message);
+      }
     } catch (err) {
       console.error('Failed to perform auto backup on window close:', err);
     } finally {
@@ -381,6 +395,37 @@ ipcMain.handle('clear-app-data', async () => {
   } catch (err) {
     console.error('Clear app data error:', err);
     return { success: false, error: err.message };
+  }
+});
+
+// Cloud Sync IPC Handlers
+ipcMain.handle('cloud-sync-upload', async () => {
+  try {
+    const branch = db.getCurrentBranch ? db.getCurrentBranch() : 'b1';
+    return await cloudSync.uploadToCloud(branch);
+  } catch (err) {
+    console.error('[CloudSync Upload Error]:', err);
+    return { success: false, error: err.message };
+  }
+});
+
+ipcMain.handle('cloud-sync-restore', async () => {
+  try {
+    const branch = db.getCurrentBranch ? db.getCurrentBranch() : 'b1';
+    return await cloudSync.restoreFromCloud(branch);
+  } catch (err) {
+    console.error('[CloudSync Restore Error]:', err);
+    return { success: false, error: err.message };
+  }
+});
+
+ipcMain.handle('cloud-sync-get-status', async () => {
+  try {
+    const branch = db.getCurrentBranch ? db.getCurrentBranch() : 'b1';
+    return await cloudSync.getCloudStatus(branch);
+  } catch (err) {
+    console.error('[CloudSync Status Error]:', err);
+    return { connected: false, error: err.message };
   }
 });
 

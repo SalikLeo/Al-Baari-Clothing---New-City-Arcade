@@ -138,6 +138,84 @@ const Settings = {
             </div>
           </div>
 
+          <!-- Cloud Sync & Multi-Laptop Restore Card -->
+          <div class="bg-white rounded-xl shadow-sm border border-indigo-100 overflow-hidden">
+            <div class="p-4 border-b border-indigo-50 bg-gradient-to-r from-indigo-50/80 via-slate-50 to-white flex items-center justify-between">
+              <div class="flex items-center gap-2.5">
+                <div class="w-8 h-8 rounded-lg bg-indigo-600 text-white flex items-center justify-center shadow-xs">
+                  <i data-lucide="cloud" class="w-4 h-4"></i>
+                </div>
+                <div>
+                  <h3 class="font-bold text-base text-slate-800">Cloud Sync & Restore</h3>
+                  <p class="text-[11px] text-slate-500">Sync data between laptops or restore everything onto a new laptop with one click</p>
+                </div>
+              </div>
+              <span id="cloud-sync-status-badge" class="text-[10px] font-black uppercase tracking-wider px-2.5 py-1 rounded-full bg-slate-100 text-slate-600 flex items-center gap-1.5 shadow-2xs">
+                <span class="w-1.5 h-1.5 rounded-full bg-slate-400"></span> Checking...
+              </span>
+            </div>
+
+            <div class="p-4 space-y-4">
+              <!-- Sync / Restore Action Row -->
+              <div class="grid grid-cols-1 md:grid-cols-2 gap-3.5">
+                <!-- Backup / Upload to Cloud -->
+                <div class="p-3.5 rounded-xl border border-slate-200/80 bg-slate-50/50 flex flex-col justify-between space-y-3">
+                  <div>
+                    <div class="flex items-center gap-2 mb-1">
+                      <div class="w-6 h-6 rounded-md bg-indigo-100 text-indigo-700 flex items-center justify-center">
+                        <i data-lucide="cloud-upload" class="w-3.5 h-3.5"></i>
+                      </div>
+                      <h4 class="font-bold text-slate-800 text-sm">Upload to Cloud</h4>
+                    </div>
+                    <p class="text-[11px] text-slate-500 leading-relaxed">
+                      Upload this laptop's complete stock, sales, invoices, and settings to the cloud.
+                    </p>
+                  </div>
+                  <div class="pt-1">
+                    <button type="button" id="btn-cloud-upload" onclick="Settings.executeCloudUpload()" class="w-full bg-indigo-600 hover:bg-indigo-700 active:scale-[0.98] text-white font-bold py-2.5 px-3 rounded-lg text-xs transition-all flex items-center justify-center gap-2 shadow-sm cursor-pointer">
+                      <i data-lucide="cloud-upload" class="w-4 h-4"></i>
+                      <span>Sync to Cloud Now</span>
+                    </button>
+                    <span id="cloud-last-upload-label" class="text-[10px] text-slate-400 text-center block mt-1.5">Last upload: Never from this laptop</span>
+                  </div>
+                </div>
+
+                <!-- Restore from Cloud -->
+                <div class="p-3.5 rounded-xl border border-emerald-200/80 bg-emerald-50/30 flex flex-col justify-between space-y-3">
+                  <div>
+                    <div class="flex items-center gap-2 mb-1">
+                      <div class="w-6 h-6 rounded-md bg-emerald-100 text-emerald-700 flex items-center justify-center">
+                        <i data-lucide="cloud-download" class="w-3.5 h-3.5"></i>
+                      </div>
+                      <h4 class="font-bold text-slate-800 text-sm">Restore from Cloud</h4>
+                    </div>
+                    <p class="text-[11px] text-slate-500 leading-relaxed">
+                      Download and restore the latest cloud backup onto this laptop. <span class="text-emerald-700 font-semibold">Perfect for new laptop setups!</span>
+                    </p>
+                  </div>
+                  <div class="pt-1">
+                    <button type="button" id="btn-cloud-restore" onclick="Settings.executeCloudRestore()" class="w-full bg-emerald-600 hover:bg-emerald-700 active:scale-[0.98] text-white font-bold py-2.5 px-3 rounded-lg text-xs transition-all flex items-center justify-center gap-2 shadow-sm cursor-pointer">
+                      <i data-lucide="cloud-download" class="w-4 h-4"></i>
+                      <span>Restore from Cloud</span>
+                    </button>
+                    <span id="cloud-last-backup-found" class="text-[10px] text-slate-500 text-center block mt-1.5">Checking cloud backup...</span>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Options -->
+              <div class="pt-2.5 border-t border-slate-100 flex items-center justify-between">
+                <label class="flex items-center gap-2.5 cursor-pointer text-xs text-slate-700 font-medium">
+                  <input type="checkbox" id="chk-auto-cloud-sync" onchange="Settings.toggleAutoCloudSync(this.checked)" class="w-4 h-4 text-indigo-600 rounded border-slate-300 focus:ring-indigo-500 cursor-pointer">
+                  <span>Automatically sync database to cloud whenever closing the application</span>
+                </label>
+                <button type="button" onclick="Settings.refreshCloudStatus()" class="text-slate-400 hover:text-slate-600 text-xs flex items-center gap-1 cursor-pointer">
+                  <i data-lucide="refresh-cw" class="w-3 h-3"></i> Refresh Status
+                </button>
+              </div>
+            </div>
+          </div>
+
           <!-- Backup & Restore -->
           <div class="bg-white rounded-xl shadow-sm border border-slate-100 overflow-hidden">
             <div class="p-4 border-b border-slate-100 bg-slate-50 flex items-center justify-between">
@@ -733,6 +811,7 @@ const Settings = {
             buttonText: 'OK'
           });
           this.renderTabDropdown();
+    this.refreshCloudStatus();
         } else {
           app.showAlert({
             title: 'Error',
@@ -743,4 +822,182 @@ const Settings = {
       }
     });
   }
+,
+
+  async refreshCloudStatus() {
+    const badge = document.getElementById('cloud-sync-status-badge');
+    const uploadLabel = document.getElementById('cloud-last-upload-label');
+    const backupFoundLabel = document.getElementById('cloud-last-backup-found');
+    const chkAuto = document.getElementById('chk-auto-cloud-sync');
+
+    if (chkAuto) {
+      const autoSync = window.localStorage.getItem('auto_cloud_sync') === 'true';
+      chkAuto.checked = autoSync;
+    }
+
+    if (!window.api || !window.api.cloudSyncGetStatus) return;
+
+    try {
+      const status = await window.api.cloudSyncGetStatus();
+      if (badge) {
+        if (status.connected) {
+          badge.className = 'text-[10px] font-black uppercase tracking-wider px-2.5 py-1 rounded-full bg-emerald-100 text-emerald-800 flex items-center gap-1.5 shadow-2xs';
+          badge.innerHTML = '<span class="w-1.5 h-1.5 rounded-full bg-emerald-500"></span> Connected to Cloud';
+        } else {
+          badge.className = 'text-[10px] font-black uppercase tracking-wider px-2.5 py-1 rounded-full bg-amber-100 text-amber-800 flex items-center gap-1.5 shadow-2xs';
+          badge.innerHTML = '<span class="w-1.5 h-1.5 rounded-full bg-amber-500"></span> Offline (No Internet)';
+        }
+      }
+
+      if (uploadLabel) {
+        if (status.localSyncTime) {
+          const d = new Date(status.localSyncTime);
+          uploadLabel.textContent = 'Last upload: ' + d.toLocaleDateString() + ' at ' + d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+        } else {
+          uploadLabel.textContent = 'Last upload: Never from this laptop';
+        }
+      }
+
+      if (backupFoundLabel) {
+        if (status.cloudMeta && status.cloudMeta.timestamp) {
+          const d = new Date(status.cloudMeta.timestamp);
+          const dev = status.cloudMeta.device ? ' (' + status.cloudMeta.device + ')' : '';
+          const pCount = (status.cloudMeta.counts && status.cloudMeta.counts.products) ? status.cloudMeta.counts.products : 0;
+          const iCount = (status.cloudMeta.counts && status.cloudMeta.counts.proposals) ? status.cloudMeta.counts.proposals : 0;
+          backupFoundLabel.innerHTML = '<span class="text-emerald-700 font-semibold">Latest Cloud Backup:</span> ' + d.toLocaleDateString() + ' ' + d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) + dev + ' • <span class="font-mono">' + pCount + ' products, ' + iCount + ' invoices</span>';
+        } else {
+          backupFoundLabel.textContent = 'No cloud backup found on Supabase yet. Click "Sync to Cloud Now" to create one.';
+        }
+      }
+    } catch (err) {
+      console.warn('Error checking cloud status:', err);
+      if (badge) {
+        badge.className = 'text-[10px] font-black uppercase tracking-wider px-2.5 py-1 rounded-full bg-slate-100 text-slate-500 flex items-center gap-1.5';
+        badge.innerHTML = '<span class="w-1.5 h-1.5 rounded-full bg-slate-400"></span> Check failed';
+      }
+    }
+  },
+
+  async toggleAutoCloudSync(enabled) {
+    window.localStorage.setItem('auto_cloud_sync', enabled ? 'true' : 'false');
+    if (window.api && window.api.setKv) {
+      await window.api.setKv('auto_cloud_sync', enabled ? 'true' : 'false');
+    }
+    app.showNotification?.({
+      title: enabled ? 'Auto Cloud Sync Enabled' : 'Auto Cloud Sync Disabled',
+      message: enabled ? 'Your database will automatically backup to the cloud whenever you close the app.' : 'Automatic cloud backup on exit turned off.',
+      type: 'info'
+    });
+  },
+
+  async executeCloudUpload() {
+    if (!window.api || !window.api.cloudSyncUpload) {
+      return app.showAlert({
+        title: 'Feature Unavailable',
+        message: 'Cloud Sync is only available in Desktop Electron mode.'
+      });
+    }
+
+    const btn = document.getElementById('btn-cloud-upload');
+    const origHtml = btn ? btn.innerHTML : '';
+    if (btn) {
+      btn.disabled = true;
+      btn.classList.add('opacity-70', 'cursor-wait');
+      btn.innerHTML = '<i data-lucide="loader-2" class="w-4 h-4 animate-spin"></i> Uploading to Cloud...';
+      if (window.lucide) lucide.createIcons();
+    }
+
+    try {
+      const res = await window.api.cloudSyncUpload();
+      if (!res.success) throw new Error(res.error || 'Failed to upload snapshot');
+
+      await this.refreshCloudStatus();
+
+      const pCount = (res.counts && res.counts.products) ? res.counts.products : 0;
+      const iCount = (res.counts && res.counts.proposals) ? res.counts.proposals : 0;
+      const cCount = (res.counts && res.counts.customers) ? res.counts.customers : 0;
+
+      app.showAlert({
+        title: 'Cloud Sync Complete!',
+        message: 'Your entire store database has been securely backed up to the cloud!\n\n• Products: ' + pCount + '\n• Invoices: ' + iCount + '\n• Customers: ' + cCount + '\n\nYou can now open any other laptop and click "Restore from Cloud" to download this exact data!',
+        buttonText: 'Awesome'
+      });
+    } catch (err) {
+      console.error('Cloud upload failed:', err);
+      app.showAlert({
+        title: 'Cloud Sync Failed',
+        message: 'Could not upload backup to Supabase:\n' + err.message + '\n\nPlease check your internet connection.',
+        buttonText: 'OK'
+      });
+    } finally {
+      if (btn) {
+        btn.disabled = false;
+        btn.classList.remove('opacity-70', 'cursor-wait');
+        btn.innerHTML = origHtml;
+        if (window.lucide) lucide.createIcons();
+      }
+    }
+  },
+
+  async executeCloudRestore() {
+    if (!window.api || !window.api.cloudSyncRestore) {
+      return app.showAlert({
+        title: 'Feature Unavailable',
+        message: 'Cloud Restore is only available in Desktop Electron mode.'
+      });
+    }
+
+    app.showConfirm({
+      title: 'Restore Database from Cloud?',
+      message: 'This will replace the current local database with the latest snapshot from the cloud.\n\n(A local safety backup of this laptop will be automatically created on disk before restoring).\n\nDo you want to proceed?',
+      confirmText: 'Yes, Restore Now',
+      cancelText: 'Cancel',
+      isDanger: true,
+      onConfirm: async () => {
+        const btn = document.getElementById('btn-cloud-restore');
+        const origHtml = btn ? btn.innerHTML : '';
+        if (btn) {
+          btn.disabled = true;
+          btn.classList.add('opacity-70', 'cursor-wait');
+          btn.innerHTML = '<i data-lucide="loader-2" class="w-4 h-4 animate-spin"></i> Restoring Data...';
+          if (window.lucide) lucide.createIcons();
+        }
+
+        try {
+          const res = await window.api.cloudSyncRestore();
+          if (!res.success) throw new Error(res.error || 'Failed to restore snapshot');
+
+          await this.refreshCloudStatus();
+
+          const pCount = (res.counts && res.counts.products) ? res.counts.products : 0;
+          const iCount = (res.counts && res.counts.proposals) ? res.counts.proposals : 0;
+          const cCount = (res.counts && res.counts.customers) ? res.counts.customers : 0;
+
+          app.showAlert({
+            title: 'Cloud Restore Successful!',
+            message: 'All store data was successfully downloaded and applied!\n\n• Restored Products: ' + pCount + '\n• Restored Invoices: ' + iCount + '\n• Restored Customers: ' + cCount + '\n\nThe application will now refresh to display the restored data.',
+            buttonText: 'Refresh App',
+            onConfirm: () => {
+              window.location.reload();
+            }
+          });
+        } catch (err) {
+          console.error('Cloud restore failed:', err);
+          app.showAlert({
+            title: 'Cloud Restore Failed',
+            message: 'Could not download cloud backup:\n' + err.message,
+            buttonText: 'OK'
+          });
+        } finally {
+          if (btn) {
+            btn.disabled = false;
+            btn.classList.remove('opacity-70', 'cursor-wait');
+            btn.innerHTML = origHtml;
+            if (window.lucide) lucide.createIcons();
+          }
+        }
+      }
+    });
+  }
+
 };

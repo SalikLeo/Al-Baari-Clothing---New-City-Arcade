@@ -98,6 +98,11 @@ contextBridge.exposeInMainWorld('api', {
   selectBackupDirectory: () => ipcRenderer.invoke('select-backup-directory'),
   openBackupDirectory: () => ipcRenderer.invoke('open-backup-directory'),
 
+  // Cloud Sync
+  cloudSyncUpload: () => ipcRenderer.invoke('cloud-sync-upload'),
+  cloudSyncRestore: () => ipcRenderer.invoke('cloud-sync-restore'),
+  cloudSyncGetStatus: () => ipcRenderer.invoke('cloud-sync-get-status'),
+
   // Storage Sync
   getAllKv: () => ipcRenderer.invoke('get-all-kv'),
   setKv: (key, value) => ipcRenderer.invoke('set-kv', key, value),

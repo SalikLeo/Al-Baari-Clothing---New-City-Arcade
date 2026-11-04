@@ -623,7 +623,7 @@ function seedInitialData(branchId = 'b1') {
   }
 }
 
-function clearAllData() {
+function clearAllData(skipVacuum = false) {
   try {
     db.pragma('foreign_keys = OFF');
     const transaction = db.transaction(() => {
@@ -702,11 +702,13 @@ function clearAllData() {
     transaction();
     db.pragma('foreign_keys = ON');
 
-    try {
-      db.pragma('wal_checkpoint(TRUNCATE)');
-      db.exec('VACUUM');
-    } catch (e) {
-      console.error('Vacuum error:', e);
+    if (!skipVacuum) {
+      try {
+        db.pragma('wal_checkpoint(TRUNCATE)');
+        db.exec('VACUUM');
+      } catch (e) {
+        console.error('Vacuum error:', e);
+      }
     }
 
     return { success: true };
@@ -2113,8 +2115,172 @@ function markProposalPaid(idOrNumber) {
   return { success: true, id: p.id };
 }
 
+// ------ CLOUD SYNC EXPORT & IMPORT ------
+function exportAllData() {
+  if (!db) throw new Error('Database not initialized');
+
+  const productTables = db.prepare("SELECT name FROM sqlite_master WHERE type='table' AND name LIKE 'products_%'").all();
+  const products = {};
+  let totalProducts = 0;
+
+  productTables.forEach(t => {
+    const cat = t.name.replace('products_', '');
+    const rows = db.prepare(`SELECT * FROM ${t.name}`).all();
+    products[cat] = rows;
+    totalProducts += rows.length;
+  });
+
+  const settings = db.prepare("SELECT * FROM settings").all();
+  const category_labels = db.prepare("SELECT * FROM category_labels").all();
+  const product_units = db.prepare("SELECT * FROM product_units").all();
+  const proposals = db.prepare("SELECT * FROM proposals").all();
+  const proposal_items = db.prepare("SELECT * FROM proposal_items").all();
+  const product_rate_history = db.prepare("SELECT * FROM product_rate_history").all();
+  const customers = db.prepare("SELECT * FROM customers").all();
+  const companies = db.prepare("SELECT * FROM companies").all();
+  const expenses = db.prepare("SELECT * FROM expenses").all();
+  const expense_categories = db.prepare("SELECT * FROM expense_categories").all();
+
+  let shops = [];
+  try { shops = db.prepare("SELECT * FROM shops").all(); } catch (e) {}
+  let employees = [];
+  try { employees = db.prepare("SELECT * FROM employees").all(); } catch (e) {}
+  let app_kv_store = [];
+  try { app_kv_store = db.prepare("SELECT * FROM app_kv_store").all(); } catch (e) {}
+
+  return {
+    version: 1,
+    branchId: currentBranch,
+    exportedAt: new Date().toISOString(),
+    counts: {
+      products: totalProducts,
+      proposals: proposals.length,
+      customers: customers.length,
+      companies: companies.length,
+      expenses: expenses.length
+    },
+    tables: {
+      settings,
+      category_labels,
+      product_units,
+      products,
+      proposals,
+      proposal_items,
+      product_rate_history,
+      customers,
+      companies,
+      expenses,
+      expense_categories,
+      shops,
+      employees,
+      app_kv_store
+    }
+  };
+}
+
+function importAllData(dump) {
+  if (!db) throw new Error('Database not initialized');
+  if (!dump || !dump.tables) throw new Error('Invalid dump data structure');
+
+  const tables = dump.tables;
+  let restoredProducts = 0;
+
+  db.pragma('foreign_keys = OFF');
+  const transaction = db.transaction(() => {
+    // 1. Clear existing data
+    clearAllData(true);
+
+    // 2. Helper to insert rows with column sanitization
+    function insertRows(tableName, rows) {
+      if (!Array.isArray(rows) || rows.length === 0) return 0;
+      const tableInfo = db.prepare(`PRAGMA table_info(${tableName})`).all();
+      const validCols = tableInfo.map(c => c.name);
+
+      let count = 0;
+      for (const row of rows) {
+        const cleanRow = {};
+        for (const [k, v] of Object.entries(row)) {
+          if (validCols.includes(k)) cleanRow[k] = v;
+        }
+        const keys = Object.keys(cleanRow);
+        if (keys.length === 0) continue;
+        const placeholders = keys.map(() => '?').join(', ');
+        const values = Object.values(cleanRow);
+        try {
+          db.prepare(`INSERT OR REPLACE INTO ${tableName} (${keys.join(', ')}) VALUES (${placeholders})`).run(...values);
+          count++;
+        } catch (err) {
+          console.warn(`[Import error ${tableName}]:`, err.message);
+        }
+      }
+      return count;
+    }
+
+    // 3. Restore Categories & Units first
+    insertRows('category_labels', tables.category_labels);
+    insertRows('product_units', tables.product_units);
+    insertRows('settings', tables.settings);
+
+    // 4. Restore Products
+    if (tables.products && typeof tables.products === 'object') {
+      for (const [cat, items] of Object.entries(tables.products)) {
+        const tableName = `products_${cat}`;
+        const tableExists = db.prepare("SELECT name FROM sqlite_master WHERE type='table' AND name=?").get(tableName);
+        if (!tableExists) {
+          db.exec(`CREATE TABLE IF NOT EXISTS ${tableName} (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            item_name TEXT,
+            description TEXT,
+            current_stock REAL DEFAULT 0,
+            unit TEXT DEFAULT 'pcs',
+            cost_price REAL DEFAULT 0,
+            retail_price REAL DEFAULT 0,
+            wholesale_cost_price REAL DEFAULT 0,
+            wholesale_price REAL DEFAULT 0,
+            pieces_per_carton INTEGER DEFAULT NULL,
+            company_id INTEGER,
+            barcode TEXT
+          )`);
+        }
+        restoredProducts += insertRows(tableName, items);
+      }
+    }
+
+    // 5. Restore operational data
+    insertRows('companies', tables.companies);
+    insertRows('customers', tables.customers);
+    insertRows('expense_categories', tables.expense_categories);
+    insertRows('expenses', tables.expenses);
+    insertRows('proposals', tables.proposals);
+    insertRows('proposal_items', tables.proposal_items);
+    insertRows('product_rate_history', tables.product_rate_history);
+    insertRows('shops', tables.shops);
+    insertRows('employees', tables.employees);
+    insertRows('app_kv_store', tables.app_kv_store);
+  });
+
+  transaction();
+  db.pragma('foreign_keys = ON');
+
+  try {
+    db.pragma('wal_checkpoint(TRUNCATE)');
+  } catch (e) {}
+
+  return {
+    success: true,
+    counts: {
+      products: restoredProducts,
+      proposals: (tables.proposals || []).length,
+      customers: (tables.customers || []).length,
+      companies: (tables.companies || []).length,
+      expenses: (tables.expenses || []).length
+    }
+  };
+}
+
 module.exports = {
   init, getDbPath, getDbPathForBranch, close, backupDatabase, clearAllData,
+  exportAllData, importAllData,
   switchBranch, getCurrentBranch, copyCatalogFromBranch,
   addProductStock, getRateHistory, deleteRateHistory, getAllRatesList, markProposalPaid,
   getSettings, saveSettings,
