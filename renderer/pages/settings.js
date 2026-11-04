@@ -214,42 +214,6 @@ const Settings = {
               </div>
             </div>
           </div>
-          <!-- Hostinger Web & Cloud Server -->
-          <div class="bg-white rounded-xl shadow-sm border border-slate-100 overflow-hidden">
-            <div class="p-4 border-b border-slate-100 bg-slate-50 flex items-center justify-between">
-              <div class="flex items-center gap-2">
-                <div class="w-7 h-7 rounded-lg bg-indigo-50 text-indigo-600 flex items-center justify-center">
-                  <i data-lucide="globe" class="w-4 h-4"></i>
-                </div>
-                <h3 class="font-bold text-lg text-slate-700">Hostinger Online Server</h3>
-              </div>
-              <span id="hostinger-status-badge" class="text-[10px] font-black uppercase tracking-wider px-2.5 py-0.5 rounded-full bg-slate-100 text-slate-600 flex items-center gap-1 shadow-2xs">
-                Checking...
-              </span>
-            </div>
-            <div class="p-4 space-y-3.5">
-              <p class="text-xs text-slate-500 leading-relaxed">
-                Connect this application to your Hostinger domain. When uploaded to Hostinger, the app automatically connects to your online MySQL database.
-              </p>
-
-              <div>
-                <label class="block text-[11px] font-bold text-slate-500 uppercase tracking-wide mb-1">Hostinger API Endpoint URL</label>
-                <input type="text" id="set-hostinger-url" placeholder="https://yourdomain.com/api (Leave blank for auto)" class="w-full border border-slate-200 rounded-lg p-2 text-xs font-mono focus:ring-1 focus:ring-accent outline-none">
-                <span class="text-[10px] text-slate-400 mt-1 block">Default: automatically detects <code>/api</code> on your Hostinger domain.</span>
-              </div>
-
-              <div class="flex items-center gap-2 pt-2 border-t border-slate-100">
-                <button type="button" onclick="Settings.saveHostingerConfig()" class="bg-indigo-600 hover:bg-indigo-700 active:scale-[0.98] text-white font-bold px-4 py-2 rounded-lg text-xs transition-all flex items-center gap-1.5 shadow-sm cursor-pointer">
-                  <i data-lucide="save" class="w-3.5 h-3.5"></i>
-                  Save Settings
-                </button>
-                <button type="button" onclick="Settings.testHostingerConnection()" class="bg-white hover:bg-slate-50 text-slate-700 border border-slate-200 font-bold px-3.5 py-2 rounded-lg text-xs transition-all flex items-center gap-1.5 shadow-2xs cursor-pointer">
-                  <i data-lucide="activity" class="w-3.5 h-3.5"></i>
-                  Test Connection
-                </button>
-              </div>
-            </div>
-          </div>
         </div>
       </div>
     `;
@@ -399,7 +363,6 @@ const Settings = {
     }
 
     this.renderTabDropdown();
-    this.reloadHostingerStatus();
 
     if (window.api && window.api.getBackupDirectory) {
       try {
@@ -732,70 +695,6 @@ const Settings = {
     }).join('');
 
     if (window.lucide) lucide.createIcons();
-  },
-
-  async reloadHostingerStatus() {
-    const urlInput = document.getElementById('set-hostinger-url');
-    const badge = document.getElementById('hostinger-status-badge');
-    const savedUrl = window.localStorage.getItem('hostinger_api_url') || '';
-
-    if (urlInput) urlInput.value = savedUrl;
-    if (!badge) return;
-
-    if (window.api && window.api.isHostinger) {
-      badge.className = 'text-[10px] font-black uppercase tracking-wider px-2.5 py-0.5 rounded-full bg-emerald-100 text-emerald-800 flex items-center gap-1';
-      badge.innerHTML = '<span class="w-1.5 h-1.5 rounded-full bg-emerald-500"></span> Online (Hostinger)';
-    } else {
-      badge.className = 'text-[10px] font-black uppercase tracking-wider px-2.5 py-0.5 rounded-full bg-blue-100 text-blue-800 flex items-center gap-1';
-      badge.innerHTML = '<span class="w-1.5 h-1.5 rounded-full bg-blue-500"></span> Local Desktop Mode';
-    }
-  },
-
-  async saveHostingerConfig() {
-    const url = (document.getElementById('set-hostinger-url')?.value || '').trim();
-    window.localStorage.setItem('hostinger_api_url', url);
-    await this.testHostingerConnection();
-  },
-
-  async testHostingerConnection() {
-    const url = (document.getElementById('set-hostinger-url')?.value || '').trim();
-    const badge = document.getElementById('hostinger-status-badge');
-
-    if (badge) {
-      badge.className = 'text-[10px] font-black uppercase tracking-wider px-2.5 py-0.5 rounded-full bg-amber-50 text-amber-700 flex items-center gap-1';
-      badge.innerHTML = '<span class="w-1.5 h-1.5 rounded-full bg-amber-500 animate-pulse"></span> Testing...';
-    }
-
-    if (window.api && typeof window.api.testConnection === 'function') {
-      const res = await window.api.testConnection(url);
-      if (res.success) {
-        if (badge) {
-          badge.className = 'text-[10px] font-black uppercase tracking-wider px-2.5 py-0.5 rounded-full bg-emerald-100 text-emerald-800 flex items-center gap-1';
-          badge.innerHTML = '<span class="w-1.5 h-1.5 rounded-full bg-emerald-500"></span> Connected';
-        }
-        app.showAlert({
-          title: 'Connected Successfully!',
-          message: 'Connection to your Hostinger server verified successfully!',
-          buttonText: 'Great'
-        });
-      } else {
-        if (badge) {
-          badge.className = 'text-[10px] font-black uppercase tracking-wider px-2.5 py-0.5 rounded-full bg-rose-100 text-rose-800 flex items-center gap-1';
-          badge.innerHTML = '<span class="w-1.5 h-1.5 rounded-full bg-rose-500"></span> Connection Error';
-        }
-        app.showAlert({
-          title: 'Connection Failed',
-          message: 'Could not connect to Hostinger API: ' + (res.error || 'Check your URL or make sure files are uploaded.'),
-          buttonText: 'Close'
-        });
-      }
-    } else {
-      app.showAlert({
-        title: 'Saved',
-        message: 'Hostinger configuration saved.',
-        buttonText: 'OK'
-      });
-    }
   },
 
   async toggleTabLock(key, event) {
