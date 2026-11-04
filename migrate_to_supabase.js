@@ -146,7 +146,23 @@ async function runMigration() {
 
     // H. Migrate Proposals (Sales Invoices)
     console.log('\n🧾 8/12 Migrating Sales Invoices (Proposals)...');
-    const proposals = db.prepare('SELECT * FROM proposals').all();
+    const rawProposals = db.prepare('SELECT * FROM proposals').all();
+    const validProposalCols = [
+      'id', 'proposal_number', 'customer_name', 'location', 'phone', 'date',
+      'retail_total', 'cost_total', 'profit', 'status', 'received_amount',
+      'discount', 'seller_name', 'payment_method', 'tax_percent', 'tax_amount',
+      'subtotal', 'sale_mode', 'shop_id', 'shop_name', 'shop_address',
+      'salesman_name', 'salesman_contact', 'booking_day', 'delivery_day',
+      'branch_id', 'created_at'
+    ];
+    const proposals = rawProposals.map(p => {
+      const clean = {};
+      validProposalCols.forEach(col => {
+        if (p[col] !== undefined) clean[col] = p[col];
+      });
+      if (!clean.branch_id) clean.branch_id = 'b1';
+      return clean;
+    });
     const propCount = await batchInsert('proposals', proposals, 100);
     console.log(`   ✅ ${propCount} invoices migrated`);
 
