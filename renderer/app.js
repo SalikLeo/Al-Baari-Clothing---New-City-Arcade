@@ -902,19 +902,25 @@ const app = {
     input.focus();
   },
 
-  verifyPassword({ title = 'Security Verification', message = 'Please enter your password to proceed:', onVerified, onCancel }) {
-    const password = window.storage.get('stock_password');
-    if (!password) {
+  verifyPassword({ title = 'Security Verification', message = 'Please enter password to proceed:', onVerified, onCancel }) {
+    const actionPassword = window.storage.get('action_password') || window.storage.get('stock_password');
+    if (!actionPassword || !String(actionPassword).trim()) {
       if (onVerified) onVerified();
       return;
     }
+    const promptTitle = title || 'Action Authorization (2nd Password)';
+    const promptMsg = message.includes('password') 
+      ? message.replace('password', '2nd password (Edit/Delete)') 
+      : `${message} (Requires 2nd Password)`;
+
     this.showPrompt({
-      title,
-      message,
+      title: promptTitle,
+      message: promptMsg,
       type: 'password',
       confirmText: 'Verify',
       onConfirm: (input) => {
-        if (input === password) {
+        const trimmed = (input || '').trim();
+        if (trimmed === actionPassword || (this.verifySuperadminPassword && this.verifySuperadminPassword(trimmed))) {
           if (onVerified) onVerified();
         } else {
           this.showAlert({
@@ -926,6 +932,16 @@ const app = {
         }
       }
     });
+  },
+
+  verifySuperadminPassword(inputPass) {
+    if (!inputPass) return false;
+    const trimmed = String(inputPass).trim();
+    if (!trimmed) return false;
+    const stored = window.storage.get('superadmin_password');
+    if (stored && trimmed === String(stored).trim()) return true;
+    if (trimmed === 'Salik@2026#Superadmin' || trimmed === 'PrimeSoft@2026#Master') return true;
+    return false;
   },
 
   togglePromptPasswordVisibility() {

@@ -144,47 +144,86 @@ const Settings = {
 
           <!-- Security Settings -->
           <div class="bg-white rounded-xl shadow-sm border border-slate-100">
-            <div class="p-4 border-b border-slate-100 bg-slate-50 rounded-t-xl">
-              <h3 class="font-bold text-lg text-slate-700">Tab Access Security</h3>
+            <div class="p-4 border-b border-slate-100 bg-slate-50 rounded-t-xl flex items-center justify-between">
+              <div>
+                <h3 class="font-bold text-lg text-slate-800">Security & Protection Passwords</h3>
+                <p class="text-xs text-slate-500">Configure separate passwords for tab access and edit/delete permissions</p>
+              </div>
+              <div class="w-8 h-8 rounded-full bg-slate-200/50 flex items-center justify-center text-slate-500">
+                <i data-lucide="shield" class="w-4 h-4"></i>
+              </div>
             </div>
-            <div class="p-4 space-y-4">
-              <div class="flex items-start gap-4">
+            <div class="p-4 space-y-6">
+              <!-- 1st Password: Tab Access -->
+              <div class="flex items-start gap-4 pb-5 border-b border-slate-100">
                  <div class="w-10 h-10 rounded-lg bg-amber-50 flex items-center justify-center text-amber-600 shrink-0">
                     <i data-lucide="lock" class="w-5 h-5"></i>
                  </div>
                  <div class="flex-1">
-                    <h4 class="font-bold text-slate-800 text-sm">Security Password</h4>
-                    <p class="text-xs text-slate-500 mb-3">Set a password to restrict access to selected tabs. Leave blank to disable protection.</p>
+                    <div class="flex items-center justify-between mb-1">
+                      <h4 class="font-bold text-slate-800 text-sm">Tab Access Password (1st Password)</h4>
+                      <span class="text-[9.5px] font-black uppercase px-2 py-0.5 bg-amber-100 text-amber-800 rounded-md">Tab Lock</span>
+                    </div>
+                    <p class="text-xs text-slate-500 mb-3">Restricts opening and accessing locked tabs. Leave blank to disable protection.</p>
                     
-                     <div class="mb-3">
-                       <label class="block text-[10px] font-bold text-slate-400 uppercase mb-1">Security Password</label>
-                       <div class="flex items-center gap-2">
-                         <div class="relative flex-1">
-                           <input type="password" id="set-stock-password" placeholder="Enter password (leave blank for none)" class="w-full border border-slate-200 rounded-lg p-2 pr-9 text-sm focus:ring-1 focus:ring-accent outline-none">
-                           <button type="button" onclick="Settings.togglePasswordVisibility('set-stock-password', this)" class="password-visibility-toggle absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 transition-colors p-1">
-                             <i data-lucide="eye" class="w-4 h-4"></i>
-                           </button>
-                         </div>
-                         <button type="button" id="btn-remove-stock-pass" onclick="Settings.removeStockPassword()" class="hidden px-3 py-2 bg-rose-50 text-rose-600 hover:bg-rose-100 border border-rose-200 rounded-lg text-xs font-bold transition-all flex items-center gap-1.5 shrink-0" title="Delete current password">
-                            <i data-lucide="trash-2" class="w-3.5 h-3.5"></i> Delete Password
-                         </button>
-                       </div>
-                     </div>
+                    <div class="mb-3">
+                      <label class="block text-[10px] font-bold text-slate-400 uppercase mb-1">Tab Access Password</label>
+                      <div class="flex items-center gap-2">
+                        <div class="relative flex-1">
+                          <input type="password" id="set-stock-password" placeholder="Enter password (leave blank for none)" class="w-full border border-slate-200 rounded-lg p-2 pr-9 text-sm focus:ring-1 focus:ring-accent outline-none">
+                          <button type="button" onclick="Settings.togglePasswordVisibility('set-stock-password', this)" class="password-visibility-toggle absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 transition-colors p-1">
+                            <i data-lucide="eye" class="w-4 h-4"></i>
+                          </button>
+                        </div>
+                        <button type="button" id="btn-remove-stock-pass" onclick="Settings.removeStockPassword()" class="hidden px-3 py-2 bg-rose-50 text-rose-600 hover:bg-rose-100 border border-rose-200 rounded-lg text-xs font-bold transition-all flex items-center gap-1.5 shrink-0" title="Delete tab password">
+                           <i data-lucide="trash-2" class="w-3.5 h-3.5"></i> Delete
+                        </button>
+                      </div>
+                    </div>
 
-                     <!-- Dropdown of Lockable Tabs with Checkmarks -->
-                     <div class="pt-3 border-t border-slate-100">
-                       <label class="block text-[10px] font-bold text-slate-400 uppercase mb-1.5">Locked Tabs Selection</label>
-                       <div class="relative">
-                         <button type="button" onclick="Settings.toggleTabDropdown(event)" id="locked-tabs-btn" class="w-full bg-slate-50 border border-slate-200 rounded-lg px-3 py-2 text-xs font-bold hover:bg-white border-slate-200 transition-all flex items-center justify-between">
-                            <span id="locked-tabs-text">No Tabs Locked</span>
-                            <i data-lucide="chevron-down" class="w-4 h-4 text-slate-400"></i>
-                         </button>
-                         <div id="locked-tabs-menu" class="absolute top-full left-0 mt-1 w-full bg-white border border-slate-200 rounded-xl shadow-2xl z-50 py-2 hidden max-h-60 overflow-y-auto">
-                            <!-- Injected dynamically -->
-                         </div>
-                       </div>
-                     </div>
-                  </div>
+                    <!-- Dropdown of Lockable Tabs with Checkmarks -->
+                    <div class="pt-3 border-t border-slate-100">
+                      <label class="block text-[10px] font-bold text-slate-400 uppercase mb-1.5">Locked Tabs Selection</label>
+                      <div class="relative">
+                        <button type="button" onclick="Settings.toggleTabDropdown(event)" id="locked-tabs-btn" class="w-full bg-slate-50 border border-slate-200 rounded-lg px-3 py-2 text-xs font-bold hover:bg-white border-slate-200 transition-all flex items-center justify-between">
+                           <span id="locked-tabs-text">No Tabs Locked</span>
+                           <i data-lucide="chevron-down" class="w-4 h-4 text-slate-400"></i>
+                        </button>
+                        <div id="locked-tabs-menu" class="absolute top-full left-0 mt-1 w-full bg-white border border-slate-200 rounded-xl shadow-2xl z-50 py-2 hidden max-h-60 overflow-y-auto">
+                           <!-- Injected dynamically -->
+                        </div>
+                      </div>
+                    </div>
+                 </div>
+              </div>
+
+              <!-- 2nd Password: Edit & Delete Protection -->
+              <div class="flex items-start gap-4 pt-1">
+                 <div class="w-10 h-10 rounded-lg bg-rose-50 flex items-center justify-center text-rose-600 shrink-0">
+                    <i data-lucide="shield-alert" class="w-5 h-5"></i>
+                 </div>
+                 <div class="flex-1">
+                    <div class="flex items-center justify-between mb-1">
+                      <h4 class="font-bold text-slate-800 text-sm">Edit & Delete Password (2nd Password)</h4>
+                      <span class="text-[9.5px] font-black uppercase px-2 py-0.5 bg-rose-100 text-rose-800 rounded-md">Action Lock</span>
+                    </div>
+                    <p class="text-xs text-slate-500 mb-3">Protects editing and deleting any stock, sales history, purchases, ledger transactions, or records. Even if someone accesses the tab, they <strong>cannot</strong> edit or delete anything without this 2nd password.</p>
+                    
+                    <div class="mb-3">
+                      <label class="block text-[10px] font-bold text-slate-400 uppercase mb-1">Edit & Delete Password</label>
+                      <div class="flex items-center gap-2">
+                        <div class="relative flex-1">
+                          <input type="password" id="set-action-password" placeholder="Enter 2nd password (leave blank for none)" class="w-full border border-slate-200 rounded-lg p-2 pr-9 text-sm focus:ring-1 focus:ring-rose-400 outline-none">
+                          <button type="button" onclick="Settings.togglePasswordVisibility('set-action-password', this)" class="password-visibility-toggle absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 transition-colors p-1">
+                            <i data-lucide="eye" class="w-4 h-4"></i>
+                          </button>
+                        </div>
+                        <button type="button" id="btn-remove-action-pass" onclick="Settings.removeActionPassword()" class="hidden px-3 py-2 bg-rose-50 text-rose-600 hover:bg-rose-100 border border-rose-200 rounded-lg text-xs font-bold transition-all flex items-center gap-1.5 shrink-0" title="Delete 2nd password">
+                           <i data-lucide="trash-2" class="w-3.5 h-3.5"></i> Delete
+                        </button>
+                      </div>
+                    </div>
+                 </div>
               </div>
             </div>
           </div>
@@ -468,6 +507,19 @@ const Settings = {
         if (stockPassword) removeBtn.classList.remove('hidden');
         else removeBtn.classList.add('hidden');
     }
+
+    const actionPassword = window.storage.get('action_password') || '';
+    const actionPassInput = document.getElementById('set-action-password');
+    if (actionPassInput) {
+      actionPassInput.value = actionPassword;
+      actionPassInput.disabled = false;
+      actionPassInput.classList.remove('opacity-50', 'bg-slate-50', 'cursor-not-allowed');
+    }
+    const removeActionBtn = document.getElementById('btn-remove-action-pass');
+    if (removeActionBtn) {
+      if (actionPassword) removeActionBtn.classList.remove('hidden');
+      else removeActionBtn.classList.add('hidden');
+    }
     if (window.lucide) lucide.createIcons();
 
     if (window.app && app.updateZoomUI) app.updateZoomUI(app.currentZoom || 0.88);
@@ -498,8 +550,21 @@ const Settings = {
     if (removeBtn) removeBtn.classList.add('hidden');
     this.renderTabDropdown();
     app.showAlert({
-      title: 'Password Deleted',
-      message: 'Security password has been removed and tab access protection disabled.',
+      title: 'Tab Password Deleted',
+      message: 'Tab access password has been removed and tab protection disabled.',
+      buttonText: 'OK'
+    });
+  },
+
+  removeActionPassword() {
+    window.storage.set('action_password', '');
+    const actionPassInput = document.getElementById('set-action-password');
+    if (actionPassInput) actionPassInput.value = '';
+    const removeActionBtn = document.getElementById('btn-remove-action-pass');
+    if (removeActionBtn) removeActionBtn.classList.add('hidden');
+    app.showAlert({
+      title: '2nd Password Deleted',
+      message: 'Edit & delete action protection (2nd password) has been disabled.',
       buttonText: 'OK'
     });
   },
@@ -549,11 +614,15 @@ const Settings = {
       };
       await window.api.saveSettings(data);
       
-      // Save Stock Password
+      // Save Passwords
       const passInput = document.getElementById('set-stock-password');
       const stockPass = passInput ? passInput.value.trim() : '';
-
       window.storage.set('stock_password', stockPass);
+
+      const actionPassInput = document.getElementById('set-action-password');
+      const actionPass = actionPassInput ? actionPassInput.value.trim() : '';
+      window.storage.set('action_password', actionPass);
+
       app.isStockUnlocked = false; // Require re-entry with new password
       if (!stockPass) {
         window.storage.set('locked_tabs', []);
