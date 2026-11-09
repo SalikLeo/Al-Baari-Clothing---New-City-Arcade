@@ -1568,14 +1568,28 @@ const app = {
   currentZoom: 0.88,
   async initZoom() {
     let savedZoom = null;
+
+    // 1. Try reading from localStorage (handle raw string or JSON encoded string)
     try {
       const localVal = localStorage.getItem('app_zoom');
       if (localVal) {
-        const parsed = parseFloat(localVal);
+        let clean = localVal;
+        try { clean = JSON.parse(localVal); } catch (e) {}
+        const parsed = parseFloat(clean);
         if (!isNaN(parsed) && parsed >= 0.5 && parsed <= 1.5) savedZoom = parsed;
       }
     } catch (e) {}
 
+    // 2. Try window.storage
+    if (!savedZoom && window.storage && window.storage.get) {
+      try {
+        const val = window.storage.get('app_zoom');
+        const parsed = parseFloat(val);
+        if (!isNaN(parsed) && parsed >= 0.5 && parsed <= 1.5) savedZoom = parsed;
+      } catch (e) {}
+    }
+
+    // 3. Try backend SQLite settings via IPC
     if (!savedZoom && window.api && window.api.getZoomFactor) {
       try {
         savedZoom = await window.api.getZoomFactor();
@@ -1583,6 +1597,7 @@ const app = {
         savedZoom = 0.88;
       }
     }
+
     if (!savedZoom || isNaN(savedZoom)) savedZoom = 0.88;
     await this.setZoom(savedZoom, false);
 
@@ -1606,10 +1621,11 @@ const app = {
   async setZoom(factor, save = true) {
     const z = Math.min(1.4, Math.max(0.6, Math.round(factor * 100) / 100));
     this.currentZoom = z;
+    const strVal = z.toFixed(2);
     try {
-      localStorage.setItem('app_zoom', z.toFixed(2));
+      localStorage.setItem('app_zoom', strVal);
       if (window.storage && window.storage.set) {
-        window.storage.set('app_zoom', z.toFixed(2));
+        window.storage.set('app_zoom', strVal);
       }
     } catch (e) {}
 

@@ -28,8 +28,19 @@ function createWindow() {
     try {
       const s = db.getSettings();
       if (s && s.app_zoom) {
-        const z = parseFloat(s.app_zoom);
+        let clean = s.app_zoom;
+        try { clean = JSON.parse(s.app_zoom); } catch (e) {}
+        const z = parseFloat(clean);
         if (!isNaN(z) && z >= 0.5 && z <= 1.5) return z;
+      }
+      if (db.getKv) {
+        const kvVal = db.getKv('app_zoom');
+        if (kvVal) {
+          let clean = kvVal;
+          try { clean = JSON.parse(kvVal); } catch (e) {}
+          const z = parseFloat(clean);
+          if (!isNaN(z) && z >= 0.5 && z <= 1.5) return z;
+        }
       }
     } catch (e) {}
     return 0.88;
@@ -470,15 +481,7 @@ ipcMain.handle('save-all-kv', (event, data) => db.saveAllKv(data));
 
 // App Zoom Controls IPC
 ipcMain.handle('get-zoom-factor', (event) => {
-  try {
-    const s = db.getSettings();
-    if (s && s.app_zoom) {
-      const z = parseFloat(s.app_zoom);
-      if (!isNaN(z) && z >= 0.5 && z <= 1.5) return z;
-    }
-  } catch (e) {}
-  const win = BrowserWindow.fromWebContents(event.sender);
-  return win ? win.webContents.getZoomFactor() : 0.88;
+  return getSavedAppZoom();
 });
 
 ipcMain.handle('set-zoom-factor', (event, factor) => {
@@ -489,17 +492,16 @@ ipcMain.handle('set-zoom-factor', (event, factor) => {
   }
   try {
     db.saveSettings({ app_zoom: z.toFixed(2) });
+    if (db.setKv) {
+      db.setKv('app_zoom', z.toFixed(2));
+    }
   } catch (e) {}
   return z;
 });
 
 ipcMain.handle('restore-app-zoom', (event) => {
   const win = BrowserWindow.fromWebContents(event.sender);
-  let z = 0.88;
-  try {
-    const s = db.getSettings();
-    if (s && s.app_zoom) z = parseFloat(s.app_zoom) || 0.88;
-  } catch (e) {}
+  const z = getSavedAppZoom();
   if (win && !win.isDestroyed()) {
     win.webContents.setZoomFactor(z);
   }

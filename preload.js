@@ -1,7 +1,15 @@
 const { contextBridge, ipcRenderer, webFrame } = require('electron');
 
 try {
-  webFrame.setZoomFactor(0.88);
+  let savedZoom = 0.88;
+  const raw = localStorage.getItem('app_zoom');
+  if (raw) {
+    let clean = raw;
+    try { clean = JSON.parse(raw); } catch (e) {}
+    const z = parseFloat(clean);
+    if (!isNaN(z) && z >= 0.5 && z <= 1.5) savedZoom = z;
+  }
+  webFrame.setZoomFactor(savedZoom);
 } catch (e) {}
 
 contextBridge.exposeInMainWorld('api', {
