@@ -24,8 +24,23 @@ function createWindow() {
   mainWindow.maximize();
   mainWindow.loadFile(path.join(__dirname, 'renderer', 'index.html'));
 
+  const getSavedAppZoom = () => {
+    try {
+      const s = db.getSettings();
+      if (s && s.app_zoom) {
+        const z = parseFloat(s.app_zoom);
+        if (!isNaN(z) && z >= 0.5 && z <= 1.5) return z;
+      }
+    } catch (e) {}
+    return 0.88;
+  };
+
+  mainWindow.webContents.on('dom-ready', () => {
+    try { mainWindow.webContents.setZoomFactor(getSavedAppZoom()); } catch (e) {}
+  });
+
   mainWindow.webContents.on('did-finish-load', () => {
-    mainWindow.webContents.setZoomFactor(0.88);
+    try { mainWindow.webContents.setZoomFactor(getSavedAppZoom()); } catch (e) {}
   });
 
   mainWindow.webContents.on('console-message', (event, level, message, line, sourceId) => {
@@ -61,6 +76,16 @@ function createWindow() {
 
     e.preventDefault();
     isQuitting = true;
+
+    // Save final zoom factor on close so next launch remembers exact scale
+    try {
+      if (mainWindow && !mainWindow.isDestroyed()) {
+        const z = mainWindow.webContents.getZoomFactor();
+        if (z && !isNaN(z) && z >= 0.5 && z <= 1.5) {
+          db.saveSettings({ app_zoom: z.toFixed(2) });
+        }
+      }
+    } catch (err) {}
 
     try {
       // Sync any unsaved localStorage into SQLite store before backup
@@ -442,6 +467,44 @@ ipcMain.handle('cloud-sync-get-status', async () => {
 ipcMain.handle('get-all-kv', () => db.getAllKv());
 ipcMain.handle('set-kv', (event, key, value) => db.setKv(key, value));
 ipcMain.handle('save-all-kv', (event, data) => db.saveAllKv(data));
+
+// App Zoom Controls IPC
+ipcMain.handle('get-zoom-factor', (event) => {
+  try {
+    const s = db.getSettings();
+    if (s && s.app_zoom) {
+      const z = parseFloat(s.app_zoom);
+      if (!isNaN(z) && z >= 0.5 && z <= 1.5) return z;
+    }
+  } catch (e) {}
+  const win = BrowserWindow.fromWebContents(event.sender);
+  return win ? win.webContents.getZoomFactor() : 0.88;
+});
+
+ipcMain.handle('set-zoom-factor', (event, factor) => {
+  const win = BrowserWindow.fromWebContents(event.sender);
+  const z = Math.min(1.4, Math.max(0.6, parseFloat(factor) || 0.88));
+  if (win && !win.isDestroyed()) {
+    win.webContents.setZoomFactor(z);
+  }
+  try {
+    db.saveSettings({ app_zoom: z.toFixed(2) });
+  } catch (e) {}
+  return z;
+});
+
+ipcMain.handle('restore-app-zoom', (event) => {
+  const win = BrowserWindow.fromWebContents(event.sender);
+  let z = 0.88;
+  try {
+    const s = db.getSettings();
+    if (s && s.app_zoom) z = parseFloat(s.app_zoom) || 0.88;
+  } catch (e) {}
+  if (win && !win.isDestroyed()) {
+    win.webContents.setZoomFactor(z);
+  }
+  return z;
+});
 ipcMain.handle('generate-pdf', async (event, filename) => {
   const win = BrowserWindow.fromWebContents(event.sender);
   const result = await dialog.showSaveDialog(win, {

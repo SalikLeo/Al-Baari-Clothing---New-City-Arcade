@@ -114,6 +114,14 @@ contextBridge.exposeInMainWorld('api', {
   printBarcodeStickers: (options) => ipcRenderer.invoke('print-barcode-stickers', options),
   getPrinters: () => ipcRenderer.invoke('get-printers'),
 
+  // App Zoom Controls
+  getZoomFactor: () => ipcRenderer.invoke('get-zoom-factor'),
+  setZoomFactor: (factor) => {
+    try { webFrame.setZoomFactor(factor); } catch (e) {}
+    return ipcRenderer.invoke('set-zoom-factor', factor);
+  },
+  restoreAppZoom: () => ipcRenderer.invoke('restore-app-zoom'),
+
   // Global Shortcuts Event
   onTriggerPriceChecker: (callback) => {
     ipcRenderer.on('trigger-price-checker', () => callback());
