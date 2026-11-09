@@ -2154,6 +2154,8 @@ function exportAllData() {
   try { shops = db.prepare("SELECT * FROM shops").all(); } catch (e) {}
   let employees = [];
   try { employees = db.prepare("SELECT * FROM employees").all(); } catch (e) {}
+  let favorites = [];
+  try { favorites = db.prepare("SELECT * FROM favorites").all(); } catch (e) {}
   let app_kv_store = [];
   try { app_kv_store = db.prepare("SELECT * FROM app_kv_store").all(); } catch (e) {}
 
@@ -2182,6 +2184,7 @@ function exportAllData() {
       expense_categories,
       shops,
       employees,
+      favorites,
       app_kv_store
     }
   };
@@ -2265,6 +2268,7 @@ function importAllData(dump) {
     insertRows('product_rate_history', tables.product_rate_history);
     insertRows('shops', tables.shops);
     insertRows('employees', tables.employees);
+    insertRows('favorites', tables.favorites);
     insertRows('app_kv_store', tables.app_kv_store);
   });
 
