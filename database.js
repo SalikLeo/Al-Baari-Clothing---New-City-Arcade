@@ -257,6 +257,11 @@ function createTables() {
           db.exec(`ALTER TABLE ${tableName} ADD COLUMN barcode TEXT`);
         } catch(e) {}
     }
+    if (!columns.includes('stickers_printed')) {
+        try { 
+          db.exec(`ALTER TABLE ${tableName} ADD COLUMN stickers_printed INTEGER DEFAULT 0`);
+        } catch(e) {}
+    }
     try {
       db.exec(`CREATE INDEX IF NOT EXISTS idx_${tableName}_barcode ON ${tableName}(barcode)`);
     } catch(e) {}
@@ -1058,6 +1063,19 @@ function changeProductCategory(oldCategory, newCategory, id, data = {}) {
 
 function deleteProduct(category, id) {
   db.prepare(`DELETE FROM products_${category} WHERE id = ?`).run(id);
+}
+
+function incrementStickersPrinted(category, productId, count = 1) {
+  const tableName = `products_${category}`;
+  const qty = parseInt(count, 10) || 1;
+  try {
+    db.prepare(`UPDATE ${tableName} SET stickers_printed = COALESCE(stickers_printed, 0) + ? WHERE id = ?`).run(qty, productId);
+    const updated = db.prepare(`SELECT stickers_printed FROM ${tableName} WHERE id = ?`).get(productId);
+    return { success: true, stickers_printed: updated ? updated.stickers_printed : qty };
+  } catch (err) {
+    console.error(`Error incrementing stickers_printed for ${category} ${productId}:`, err);
+    return { success: false, error: err.message };
+  }
 }
 
 function getCategoryLabels() {
@@ -2251,7 +2269,8 @@ function importAllData(dump) {
             wholesale_price REAL DEFAULT 0,
             pieces_per_carton INTEGER DEFAULT NULL,
             company_id INTEGER,
-            barcode TEXT
+            barcode TEXT,
+            stickers_printed INTEGER DEFAULT 0
           )`);
         }
         restoredProducts += insertRows(tableName, items);
@@ -2297,7 +2316,7 @@ module.exports = {
   switchBranch, getCurrentBranch, copyCatalogFromBranch,
   addProductStock, getRateHistory, deleteRateHistory, getAllRatesList, markProposalPaid,
   getSettings, saveSettings,
-  getProducts, addProduct, updateProduct, deleteProduct, findProductByName, findProductByBarcode, changeProductCategory,
+  getProducts, addProduct, updateProduct, deleteProduct, findProductByName, findProductByBarcode, changeProductCategory, incrementStickersPrinted,
   getCategoryLabels, updateCategoryLabel, searchAllProducts, getCategoryStats, addCategory, deleteCategory,
   getProposals, getProposal, saveProposal, deleteProposal, updateProposalStatus, receivePayment, getNextProposalNumber, getNextCustomerName,
   getAllProposalItems,

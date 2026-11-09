@@ -1887,6 +1887,12 @@ const app = {
     if (priceDisplay) priceDisplay.textContent = 'Price: Rs. ' + price.toLocaleString();
     if (stockDisplay) stockDisplay.textContent = 'Stock: ' + stock;
 
+    const printedDisplay = document.getElementById('bsm-item-printed-display');
+    if (printedDisplay) {
+      const printedCount = Number(item.stickers_printed || 0);
+      printedDisplay.textContent = 'Already printed: ' + printedCount;
+    }
+
     if (bcDisplay) {
       if (hasBarcode) {
         bcDisplay.innerHTML = 'Barcode: <span class="text-amber-800 bg-amber-100 px-1.5 py-0.2 rounded font-mono font-black">' + item.barcode + '</span>';
@@ -2340,6 +2346,36 @@ const app = {
 
       if (result && result.success !== false) {
         this.showToast('Successfully printed ' + qty + ' sticker' + (qty > 1 ? 's' : '') + '!', 'success');
+
+        if (!isTest && item && item.id) {
+          const itemCat = item.slug || item.category_slug || (this.barcodeStickerState.allProducts[0]?.slug) || 'biscuits';
+          try {
+            if (window.api && window.api.incrementStickersPrinted) {
+              const res = await window.api.incrementStickersPrinted(itemCat, item.id, qty);
+              if (res && res.success) {
+                item.stickers_printed = res.stickers_printed;
+                const printedDisplay = document.getElementById('bsm-item-printed-display');
+                if (printedDisplay) {
+                  printedDisplay.textContent = 'Already printed: ' + res.stickers_printed;
+                }
+                const cached = (this.barcodeStickerState.allProducts || []).find(p => p.id === item.id && (!itemCat || p.slug === itemCat));
+                if (cached) cached.stickers_printed = res.stickers_printed;
+
+                if (window.MasterDB && Array.isArray(MasterDB.products)) {
+                  const pItem = MasterDB.products.find(p => p.id === item.id && (!itemCat || p.slug === itemCat));
+                  if (pItem) pItem.stickers_printed = res.stickers_printed;
+                  const apItem = (MasterDB.allProducts || []).find(p => p.id === item.id && (!itemCat || p.slug === itemCat));
+                  if (apItem) apItem.stickers_printed = res.stickers_printed;
+                  if (typeof MasterDB.renderTable === 'function') {
+                    MasterDB.renderTable();
+                  }
+                }
+              }
+            }
+          } catch (incErr) {
+            console.warn('Failed to increment stickers_printed:', incErr);
+          }
+        }
       } else if (result && result.failureReason) {
         console.warn('Print response:', result.failureReason);
       }

@@ -181,6 +181,7 @@ ipcMain.handle('add-product', (event, category, data) => db.addProduct(category,
 ipcMain.handle('update-product', (event, category, id, data) => db.updateProduct(category, id, data));
 ipcMain.handle('change-product-category', (event, oldCategory, newCategory, id, data) => db.changeProductCategory(oldCategory, newCategory, id, data));
 ipcMain.handle('delete-product', (event, category, id) => db.deleteProduct(category, id));
+ipcMain.handle('increment-stickers-printed', (event, category, productId, count) => db.incrementStickersPrinted(category, productId, count));
 ipcMain.handle('find-product-by-name', (event, name, excludeCategory, excludeId) => db.findProductByName(name, excludeCategory, excludeId));
 ipcMain.handle('find-product-by-barcode', (event, barcode, excludeCategory, excludeId) => db.findProductByBarcode(barcode, excludeCategory, excludeId));
 ipcMain.handle('get-category-labels', () => db.getCategoryLabels());

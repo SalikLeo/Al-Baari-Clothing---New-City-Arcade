@@ -134,7 +134,7 @@ const MasterDB = {
         </div>
         <div class="flex items-center gap-2 shrink-0">
             <button onclick="app.openBarcodeStickerModal()" class="h-10 px-3.5 bg-amber-500 hover:bg-amber-600 text-slate-950 font-black text-sm rounded-xl flex items-center gap-2 shadow-sm hover:shadow transition-all active:scale-95 border border-amber-400/50 cursor-pointer" title="Print Barcode Stickers (Speed-X SP-650UL)">
-              <i data-lucide="printer" class="w-4 h-4"></i>
+              <i data-lucide="barcode" class="w-4 h-4"></i>
               <span>Print Stickers</span>
             </button>
             <div class="h-6 w-[1px] bg-slate-200 mx-1"></div>
@@ -998,7 +998,7 @@ const MasterDB = {
 
     // Fast inlined SVG icons to prevent blocking lucide DOM scans on 1,000+ items
     const svgHistory = '<svg class="w-4 h-4 pointer-events-none" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/><path d="M12 7v5l4 2"/></svg>';
-    const svgPrinter = '<svg class="w-4 h-4 pointer-events-none" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9V2h12v7"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect width="12" height="8" x="6" y="14"/></svg>';
+    const svgBarcode = '<svg class="w-4 h-4 pointer-events-none" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 5v14"/><path d="M8 5v14"/><path d="M12 5v14"/><path d="M17 5v14"/><path d="M21 5v14"/></svg>';
     const svgEdit = '<svg class="w-4 h-4 pointer-events-none" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/><path d="m15 5 4 4"/></svg>';
     const svgTrash = '<svg class="w-4 h-4 pointer-events-none" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/><line x1="10" x2="10" y1="11" y2="17"/><line x1="14" x2="14" y1="11" y2="17"/></svg>';
     const svgStarFav = '<svg class="w-4 h-4 pointer-events-none fill-current" viewBox="0 0 24 24" fill="currentColor" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>';
@@ -1030,6 +1030,7 @@ const MasterDB = {
                   <div class="flex items-center gap-1.5 flex-wrap">
                     <span class="font-bold">${val}</span>
                     ${p.barcode ? `<span class="inline-flex items-center gap-1 font-mono text-[10px] font-bold text-slate-700 bg-slate-100 border border-slate-300 px-1.5 py-0.2 rounded shadow-2xs" title="Barcode: ${p.barcode}"><svg class="w-2.5 h-2.5 text-slate-500" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 5v14M8 5v14M12 5v14M17 5v14M21 5v14"/></svg>${p.barcode}</span>` : ''}
+                    <span class="inline-flex items-center gap-1 font-mono text-[9.5px] font-bold ${Number(p.stickers_printed) > 0 ? 'text-blue-700 bg-blue-50 border-blue-200' : 'text-slate-400 bg-slate-50 border-slate-200'} border px-1.5 py-0.2 rounded shadow-2xs" title="Total barcode stickers already printed"><svg class="w-2.5 h-2.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 5v14M8 5v14M12 5v14M17 5v14M21 5v14"/></svg>Already printed: ${p.stickers_printed || 0}</span>
                     ${isAll ? `<span class="text-[9px] font-black text-amber-800 bg-amber-100/90 border border-amber-200 px-1.5 py-0.2 rounded uppercase">${catLabel}</span>` : ''}
                   </div>
                   ${p.company_name ? `<span class="text-[9px] font-black text-blue-500 uppercase mt-0.5 tracking-widest">${p.company_name}</span>` : ''}
@@ -1056,8 +1057,8 @@ const MasterDB = {
               <button onclick="MasterDB.toggleFavorite('${itemSlug}', ${p.id})" class="group/fav p-1.5 ${p.is_favorite ? 'text-amber-500 bg-amber-50' : 'text-slate-300 hover:text-amber-400 hover:bg-amber-50'} rounded-lg transition-all flex items-center justify-center cursor-pointer" title="Toggle Favorite">
                 ${p.is_favorite ? svgStarFav : svgStarUnfav}
               </button>
-              <button onclick="MasterDB.printRowSticker(${p.id}, '${itemSlug}')" class="p-1.5 ${p.barcode ? 'text-blue-600 hover:text-blue-700 hover:bg-blue-50' : 'text-slate-300 hover:text-amber-600 hover:bg-amber-50'} rounded-lg transition-all cursor-pointer" title="${p.barcode ? 'Print Barcode Sticker (Speed-X)' : 'No barcode assigned (Edit item to generate)'}">
-                ${svgPrinter}
+              <button onclick="MasterDB.printRowSticker(${p.id}, '${itemSlug}')" class="p-1.5 ${p.barcode ? 'text-blue-600 hover:text-blue-700 hover:bg-blue-50' : 'text-slate-300 hover:text-amber-600 hover:bg-amber-50'} rounded-lg transition-all cursor-pointer" title="${p.barcode ? `Print Barcode Sticker (Already printed: ${p.stickers_printed || 0})` : 'No barcode assigned (Edit item to generate)'}">
+                ${svgBarcode}
               </button>
               <button onclick="MasterDB.openForm(${p.id}, '${itemSlug}')" class="p-1.5 text-amber-600 hover:bg-amber-50 rounded-lg transition-all cursor-pointer" title="Edit Item">
                 ${svgEdit}

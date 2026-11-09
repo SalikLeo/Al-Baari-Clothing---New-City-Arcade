@@ -30,6 +30,7 @@ contextBridge.exposeInMainWorld('api', {
   saveProduct: (category, data) => (data && data.id) ? ipcRenderer.invoke('update-product', category, data.id, data) : ipcRenderer.invoke('add-product', category, data),
   changeProductCategory: (oldCategory, newCategory, id, data) => ipcRenderer.invoke('change-product-category', oldCategory, newCategory, id, data),
   deleteProduct: (category, id) => ipcRenderer.invoke('delete-product', category, id),
+  incrementStickersPrinted: (category, productId, count) => ipcRenderer.invoke('increment-stickers-printed', category, productId, count),
   findProductByName: (name, excludeCategory, excludeId) => ipcRenderer.invoke('find-product-by-name', name, excludeCategory, excludeId),
   findProductByBarcode: (barcode, excludeCategory, excludeId) => ipcRenderer.invoke('find-product-by-barcode', barcode, excludeCategory, excludeId),
   getCategoryLabels: () => ipcRenderer.invoke('get-category-labels'),
