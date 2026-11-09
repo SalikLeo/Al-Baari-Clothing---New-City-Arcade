@@ -1392,6 +1392,11 @@ window.SalesForm = {
 
     this.renderCart();
     this.updateSummary();
+
+    const activeIdx = this.cart.findIndex(i => i.id === item.id && i.slug === item.slug);
+    if (activeIdx !== -1) {
+      this.selectedCartRow = activeIdx;
+    }
   },
 
   removeFromCart(index) {
@@ -1400,7 +1405,38 @@ window.SalesForm = {
     this.updateSummary();
   },
 
+  removeItemAndFocusSearch(index) {
+    if (this._qtyUpdateTimeout) {
+      clearTimeout(this._qtyUpdateTimeout);
+      this._qtyUpdateTimeout = null;
+      this._pendingQtyUpdate = null;
+    }
+
+    if (typeof index !== 'number' || index < 0 || index >= this.cart.length) {
+      return;
+    }
+
+    const removedItem = this.cart[index];
+    this.removeFromCart(index);
+
+    if (removedItem) {
+      app.showToast(`Removed "${removedItem.item_name}" from bill`, 'info');
+      app.playBeep('success');
+    }
+
+    this.selectedCartRow = null;
+
+    setTimeout(() => {
+      const searchInput = document.getElementById('sf-fast-item-search');
+      if (searchInput) {
+        searchInput.focus();
+        searchInput.select();
+      }
+    }, 20);
+  },
+
   focusCartField(index, fieldName) {
+    this.selectedCartRow = index;
     const id = `cart-${fieldName}-input-${index}`;
     const el = document.getElementById(id);
     if (el) {
@@ -1410,6 +1446,13 @@ window.SalesForm = {
   },
 
   handleCartKeyDown(e, rowIdx, fieldName) {
+    if (e.key === 'Delete') {
+      e.preventDefault();
+      e.stopPropagation();
+      this.removeItemAndFocusSearch(rowIdx);
+      return;
+    }
+
     const numRows = this.cart.length;
 
     if (e.key === 'Tab') {
@@ -1681,7 +1724,13 @@ window.SalesForm = {
       const latestCost = this.getItemLatestCost(item);
 
       return `
-        <tr class="hover:bg-amber-50/40 transition-colors group">
+        <tr id="cart-row-${idx}"
+            data-cart-idx="${idx}"
+            tabindex="0"
+            onfocus="SalesForm.selectedCartRow = ${idx}"
+            onclick="SalesForm.selectedCartRow = ${idx}"
+            onkeydown="SalesForm.handleCartKeyDown(event, ${idx}, 'row')"
+            class="hover:bg-amber-50/40 transition-colors group cursor-pointer focus:outline-none focus:bg-amber-100/50">
           <!-- Row Number -->
           <td class="py-1 px-2 text-center text-xs font-bold text-slate-500 tabular-nums border-r border-slate-200">
             ${idx + 1}
@@ -2106,6 +2155,55 @@ window.SalesForm = {
             e.stopPropagation();
           }
           this._scanBuffer += e.key;
+        }
+      }
+
+      if (e.key === 'Delete') {
+        const activeEl = document.activeElement;
+        
+        // 1. Focused on a cart item input (qty, price, discount)
+        const cartMatch = activeEl?.id ? activeEl.id.match(/^cart-(qty|price|discount)-input-(\d+)$/) : null;
+        if (cartMatch) {
+          const rowIdx = parseInt(cartMatch[2], 10);
+          e.preventDefault();
+          e.stopPropagation();
+          this.removeItemAndFocusSearch(rowIdx);
+          return;
+        }
+
+        // 2. Focused inside a cart row (buttons, td, tr)
+        const cartRow = activeEl?.closest ? activeEl.closest('tr[data-cart-idx]') : null;
+        if (cartRow) {
+          const rowIdx = parseInt(cartRow.dataset.cartIdx, 10);
+          if (!isNaN(rowIdx) && this.cart[rowIdx]) {
+            e.preventDefault();
+            e.stopPropagation();
+            this.removeItemAndFocusSearch(rowIdx);
+            return;
+          }
+        }
+
+        // 3. Focused on cart table or row selected
+        const targetRow = (this.selectedCartRow !== null && typeof this.selectedCartRow === 'number' && this.cart[this.selectedCartRow])
+          ? this.selectedCartRow
+          : (this.cart.length === 1 ? 0 : null);
+
+        if (targetRow !== null) {
+          const isOtherTextInput = activeEl && (
+            activeEl.id === 'sf-customer-name' || 
+            activeEl.id === 'sf-customer-phone' || 
+            activeEl.id === 'sf-received-amount' || 
+            activeEl.id === 'sf-cash-tendered' || 
+            activeEl.id === 'sf-flat-discount' || 
+            activeEl.id === 'sf-tax-rate' ||
+            (activeEl.id === 'sf-fast-item-search' && (activeEl.value || '').trim().length > 0)
+          );
+          if (!isOtherTextInput) {
+            e.preventDefault();
+            e.stopPropagation();
+            this.removeItemAndFocusSearch(targetRow);
+            return;
+          }
         }
       }
 
@@ -2752,6 +2850,7 @@ window.SalesForm = {
 
   async resetForm() {
     this.cart = [];
+    this.selectedCartRow = null;
     this.customerId = null;
     this.customerName = '';
     this.customerPhone = '';
